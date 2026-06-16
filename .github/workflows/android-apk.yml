@@ -1,0 +1,164 @@
+name: Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: APK variant
+        required: true
+        default: release
+        type: choice
+        options:
+          - release
+          - debug
+
+concurrency:
+  group: android-apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  JAVA_VERSION: '17'
+  ANDROID_COMPILE_SDK: '35'
+  ANDROID_BUILD_TOOLS: '35.0.0'
+  ANDROID_NDK_VERSION: '27.0.12077973'
+  EXPO_PUBLIC_API_BASE_URL: https://rec.nrep.ug
+  EXPO_PUBLIC_OFFLINE_MODE: 'false'
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-${{ env.ANDROID_COMPILE_SDK }}" \
+            "build-tools;${{ env.ANDROID_BUILD_TOOLS }}" \
+            "ndk;${{ env.ANDROID_NDK_VERSION }}"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Generate app icons
+        run: npm run icons:generate
+
+      - name: Create build environment
+        env:
+          EXPO_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.EXPO_PUBLIC_APPWRITE_ENDPOINT }}
+          EXPO_PUBLIC_APPWRITE_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_PROJECT_ID }}
+          EXPO_PUBLIC_APPWRITE_DATABASE_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_DATABASE_ID }}
+          EXPO_PUBLIC_APPWRITE_CONFERENCES_COLLECTION_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_CONFERENCES_COLLECTION_ID }}
+          EXPO_PUBLIC_APPWRITE_SESSIONS_COLLECTION_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_SESSIONS_COLLECTION_ID }}
+          EXPO_PUBLIC_APPWRITE_PROGRAMS_COLLECTION_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_PROGRAMS_COLLECTION_ID }}
+          EXPO_PUBLIC_APPWRITE_PROGRAM_TIME_BLOCKS_COLLECTION_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_PROGRAM_TIME_BLOCKS_COLLECTION_ID }}
+          EXPO_PUBLIC_APPWRITE_SPONSOR_CATEGORIES_COLLECTION_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_SPONSOR_CATEGORIES_COLLECTION_ID }}
+          EXPO_PUBLIC_APPWRITE_SPONSORS_COLLECTION_ID: ${{ secrets.EXPO_PUBLIC_APPWRITE_SPONSORS_COLLECTION_ID }}
+        run: node scripts/create-build-env.mjs
+
+      - name: Resolve build variant
+        id: variant
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ github.event.inputs.variant }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "name=debug" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=release" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prebuild Android project
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Configure release signing
+        if: steps.variant.outputs.name == 'release'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: node scripts/configure-android-signing.mjs
+
+      - name: Build APK
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          cd android
+          chmod +x gradlew
+          if [ "${{ steps.variant.outputs.name }}" = "debug" ]; then
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          else
+            ./gradlew assembleRelease --no-daemon --stacktrace
+          fi
+
+      - name: Prepare APK artifact
+        run: |
+          VARIANT="${{ steps.variant.outputs.name }}"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VARIANT" = "debug" ]; then
+            SRC="android/app/build/outputs/apk/debug/app-debug.apk"
+            OUT="REC-${VERSION}-${GITHUB_RUN_NUMBER}-debug.apk"
+          else
+            SRC="android/app/build/outputs/apk/release/app-release.apk"
+            OUT="REC-${VERSION}-${GITHUB_RUN_NUMBER}-release.apk"
+          fi
+          cp "$SRC" "$OUT"
+          echo "apk_path=$OUT" >> "$GITHUB_ENV"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rec-mobile-${{ steps.variant.outputs.name }}-${{ github.run_number }}
+          path: ${{ env.apk_path }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload APK to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.apk_path }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

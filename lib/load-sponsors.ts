@@ -1,0 +1,60 @@
+import { apiService } from '@/lib/api-service';
+import { isAppwriteConfigured } from '@/lib/config';
+import { fetchPublicSponsorsData } from '@/lib/public-sponsors-api';
+import type { PublicProgramData, Sponsor, SponsorCategory } from '@/lib/types';
+
+type SponsorBundle = {
+  categories: SponsorCategory[];
+  sponsors: Sponsor[];
+};
+
+function fromProgramData(programData?: Pick<PublicProgramData, 'sponsorCategories' | 'sponsors'>): SponsorBundle | null {
+  const categories = programData?.sponsorCategories;
+  const sponsors = programData?.sponsors;
+
+  if (!Array.isArray(categories) && !Array.isArray(sponsors)) {
+    return null;
+  }
+
+  return {
+    categories: categories || [],
+    sponsors: sponsors || [],
+  };
+}
+
+export async function loadConferenceSponsors(
+  conferenceId: string,
+  programData?: Pick<PublicProgramData, 'sponsorCategories' | 'sponsors'>
+): Promise<SponsorBundle> {
+  const fromProgram = fromProgramData(programData);
+  if (fromProgram && (fromProgram.categories.length > 0 || fromProgram.sponsors.length > 0)) {
+    return fromProgram;
+  }
+
+  try {
+    const sponsorData = await fetchPublicSponsorsData();
+    return {
+      categories: sponsorData.categories || [],
+      sponsors: sponsorData.sponsors || [],
+    };
+  } catch (publicError) {
+    if (isAppwriteConfigured()) {
+      return apiService.getConferenceSponsors(conferenceId);
+    }
+
+    if (fromProgram) {
+      return fromProgram;
+    }
+
+    if (publicError instanceof Error) {
+      if (publicError.message.toLowerCase().includes('failed to fetch')) {
+        throw new Error(
+          'Could not reach the sponsors API. Deploy the latest rec-registration web app, or add Appwrite keys to rec-mobile/.env.'
+        );
+      }
+      throw publicError;
+    }
+
+    throw new Error('Failed to fetch sponsors');
+  }
+}
