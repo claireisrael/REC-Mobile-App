@@ -48,8 +48,8 @@ async function removeLightBackground(input) {
 }
 
 async function buildSplashLogo(logoBuffer) {
-  const canvas = 512;
-  const logoSize = 400;
+  const canvas = 256;
+  const logoSize = 200;
   const resized = await sharp(logoBuffer)
     .resize({ width: logoSize, height: logoSize, fit: 'inside' })
     .png()

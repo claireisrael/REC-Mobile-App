@@ -6,7 +6,7 @@ import { colors } from '@/constants/theme';
 export function LoadingState() {
   return (
     <View style={styles.container}>
-      <NrepLoader size={120} />
+      <NrepLoader size={100} />
     </View>
   );
 }

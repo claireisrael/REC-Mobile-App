@@ -22,8 +22,30 @@ const defaults = {
   EXPO_PUBLIC_OFFLINE_MODE: 'false',
 };
 
+async function readExistingEnv() {
+  try {
+    const content = await fs.readFile('.env', 'utf8');
+    return Object.fromEntries(
+      content
+        .split('\n')
+        .filter((line) => line && !line.startsWith('#'))
+        .map((line) => {
+          const index = line.indexOf('=');
+          return [line.slice(0, index), line.slice(index + 1)];
+        })
+    );
+  } catch {
+    return {};
+  }
+}
+
+const existing = await readExistingEnv();
+
 const lines = keys.map((key) => {
-  const value = process.env[key] ?? defaults[key] ?? '';
+  const fromProcess = process.env[key]?.trim();
+  const existingValue = existing[key]?.trim();
+  // Never overwrite a saved local value with an empty CI/process value.
+  const value = fromProcess || existingValue || defaults[key] || '';
   return `${key}=${value}`;
 });
 

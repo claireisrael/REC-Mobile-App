@@ -20,7 +20,7 @@ function AppShell() {
   if (loading) {
     return (
       <View style={styles.bootScreen}>
-        <NrepLoader fullScreen size={200} />
+        <NrepLoader fullScreen size={120} />
       </View>
     );
   }
@@ -53,7 +53,7 @@ export default function RootLayout() {
   if (!appReady) {
     return (
       <View style={styles.bootScreen}>
-        <NrepLoader fullScreen size={200} />
+        <NrepLoader fullScreen size={120} />
       </View>
     );
   }

@@ -61,17 +61,19 @@ Artifacts are uploaded from the **Actions** tab for 30 days.
 
 Add these under **Settings → Secrets and variables → Actions**:
 
-| Secret | Purpose |
-|--------|---------|
-| `EXPO_PUBLIC_APPWRITE_ENDPOINT` | Appwrite API (sponsor fallback) |
-| `EXPO_PUBLIC_APPWRITE_PROJECT_ID` | Appwrite project |
-| `EXPO_PUBLIC_APPWRITE_DATABASE_ID` | Appwrite database |
-| `EXPO_PUBLIC_APPWRITE_CONFERENCES_COLLECTION_ID` | Collections (copy from `rec-registration/.env`) |
-| `EXPO_PUBLIC_APPWRITE_SESSIONS_COLLECTION_ID` | |
-| `EXPO_PUBLIC_APPWRITE_PROGRAMS_COLLECTION_ID` | |
-| `EXPO_PUBLIC_APPWRITE_PROGRAM_TIME_BLOCKS_COLLECTION_ID` | |
-| `EXPO_PUBLIC_APPWRITE_SPONSOR_CATEGORIES_COLLECTION_ID` | |
-| `EXPO_PUBLIC_APPWRITE_SPONSORS_COLLECTION_ID` | |
+Add these under **Settings → Secrets and variables → Actions** (use these exact secret names):
+
+| GitHub secret | Value (from `rec-registration/.env`) |
+|---------------|--------------------------------------|
+| `ENDPOINT` | `NEXT_PUBLIC_APPWRITE_ENDPOINT` |
+| `PROJECT_ID` | `NEXT_PUBLIC_APPWRITE_PROJECT_ID` |
+| `DATABASE` | `NEXT_PUBLIC_APPWRITE_DATABASE_ID` |
+| `CONFERENCES` | `NEXT_PUBLIC_APPWRITE_CONFERENCES_COLLECTION_ID` |
+| `SESSIONS` | `NEXT_PUBLIC_APPWRITE_SESSIONS_COLLECTION_ID` |
+| `PROGRAMS` | `NEXT_PUBLIC_APPWRITE_PROGRAMS_COLLECTION_ID` |
+| `TIME_BLOCKS` | `NEXT_PUBLIC_APPWRITE_PROGRAM_TIME_BLOCKS_COLLECTION_ID` |
+| `SPONSOR` | `NEXT_PUBLIC_APPWRITE_SPONSOR_CATEGORIES_COLLECTION_ID` |
+| `SPONSORS_COLLECTION` | `NEXT_PUBLIC_APPWRITE_SPONSORS_COLLECTION_ID` |
 
 ### Optional release signing secrets
 

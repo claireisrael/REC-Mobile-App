@@ -16,7 +16,7 @@ type NrepLoaderProps = {
   size?: number;
 };
 
-export function NrepLoader({ fullScreen = false, size = 164 }: NrepLoaderProps) {
+export function NrepLoader({ fullScreen = false, size = 120 }: NrepLoaderProps) {
   const rotation = useSharedValue(0);
 
   useEffect(() => {
