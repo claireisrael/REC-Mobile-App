@@ -7,42 +7,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const imagesDir = path.resolve(__dirname, '../assets/images');
 const sourcePath = path.join(imagesDir, 'nrep-logo-source.png');
 const logoPath = path.join(imagesDir, 'nrep-logo.png');
-const gold = '#FFB803';
 const size = 1024;
 
-const source = (await fs.stat(sourcePath).catch(() => null)) ? sourcePath : logoPath;
+// Trimmed transparent logo centers best; fall back to official source.
+const source = (await fs.stat(logoPath).catch(() => null))
+  ? logoPath
+  : (await fs.stat(sourcePath).catch(() => null))
+    ? sourcePath
+    : logoPath;
 
-const logoMaxWidth = Math.round(size * 0.52);
-const logoBuffer = await sharp(source).resize({ width: logoMaxWidth, fit: 'inside' }).png().toBuffer();
+const logoMaxSize = Math.round(size * 0.58);
+const logoBuffer = await sharp(source)
+  .resize({ width: logoMaxSize, height: logoMaxSize, fit: 'inside' })
+  .png()
+  .toBuffer();
 const { width: logoWidth = 0, height: logoHeight = 0 } = await sharp(logoBuffer).metadata();
 
-const recFontSize = Math.round(size * 0.1);
-const recSvgHeight = Math.round(recFontSize * 1.35);
-const recSvg = Buffer.from(`
-<svg width="${size}" height="${recSvgHeight}" xmlns="http://www.w3.org/2000/svg">
-  <text
-    x="50%"
-    y="${Math.round(recFontSize * 0.95)}"
-    font-family="Arial, Helvetica, sans-serif"
-    font-size="${recFontSize}"
-    font-weight="700"
-    fill="${gold}"
-    text-anchor="middle"
-  >REC</text>
-</svg>
-`);
-
-const gap = Math.round(size * 0.045);
-const totalHeight = logoHeight + gap + recSvgHeight;
-const contentTop = Math.round((size - totalHeight) / 2);
 const logoLeft = Math.round((size - logoWidth) / 2);
-const logoTop = contentTop;
-const recTop = logoTop + logoHeight + gap;
-
-const composites = [
-  { input: logoBuffer, top: logoTop, left: logoLeft },
-  { input: recSvg, top: recTop, left: 0 },
-];
+const logoTop = Math.round((size - logoHeight) / 2);
+const composite = [{ input: logoBuffer, top: logoTop, left: logoLeft }];
 
 const icon = await sharp({
   create: {
@@ -52,7 +35,7 @@ const icon = await sharp({
     background: '#FFFFFF',
   },
 })
-  .composite(composites)
+  .composite(composite)
   .png()
   .toBuffer();
 
@@ -64,12 +47,12 @@ const foreground = await sharp({
     background: { r: 0, g: 0, b: 0, alpha: 0 },
   },
 })
-  .composite(composites)
+  .composite(composite)
   .png()
   .toBuffer();
 
 const monochrome = await sharp(source)
-  .resize({ width: Math.round(size * 0.5), fit: 'inside' })
+  .resize({ width: logoMaxSize, height: logoMaxSize, fit: 'inside' })
   .png()
   .toBuffer();
 
@@ -80,4 +63,4 @@ await Promise.all([
   fs.writeFile(path.join(imagesDir, 'android-icon-monochrome.png'), monochrome),
 ]);
 
-console.log('Generated install icons: NREP logo + REC, centered on white.');
+console.log('Generated install icons: NREP logo only, centered (REC label comes from app name).');
