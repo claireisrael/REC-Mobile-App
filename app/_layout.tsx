@@ -1,3 +1,4 @@
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -5,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { NrepLoader } from '@/components/ui/NrepLoader';
-import { AppDataProvider } from '@/context/AppDataContext';
+import { AppDataProvider, useAppData } from '@/context/AppDataContext';
 import { colors } from '@/constants/theme';
 import { StyleSheet, View } from 'react-native';
 
@@ -13,31 +14,45 @@ export { ErrorBoundary } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
 
-const BOOT_TIMEOUT_MS = 2500;
+function AppShell() {
+  const { loading } = useAppData();
+
+  if (loading) {
+    return (
+      <View style={styles.bootScreen}>
+        <NrepLoader fullScreen size={120} />
+      </View>
+    );
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="about" />
+      <Stack.Screen name="session/[id]" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
-  const [bootReady, setBootReady] = useState(false);
+  const [loaded, fontError] = useFonts({
+    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (fontError) {
+      console.warn('Font load failed, continuing with system fonts.', fontError);
+    }
+  }, [fontError]);
 
-    const finishBoot = () => {
-      if (!cancelled) {
-        setBootReady(true);
-      }
-    };
+  useEffect(() => {
+    if (loaded || fontError) {
+      SplashScreen.hideAsync().finally(() => setAppReady(true));
+    }
+  }, [loaded, fontError]);
 
-    SplashScreen.hideAsync().finally(finishBoot);
-
-    const timeout = setTimeout(finishBoot, BOOT_TIMEOUT_MS);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, []);
-
-  if (!bootReady) {
+  if (!appReady) {
     return (
       <View style={styles.bootScreen}>
         <NrepLoader fullScreen size={120} />
@@ -48,11 +63,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppDataProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="about" />
-          <Stack.Screen name="session/[id]" />
-        </Stack>
+        <AppShell />
       </AppDataProvider>
     </SafeAreaProvider>
   );

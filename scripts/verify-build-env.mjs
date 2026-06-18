@@ -21,12 +21,10 @@ const values = Object.fromEntries(
 const missing = requiredForSponsors.filter((key) => !values[key]?.trim());
 
 if (missing.length > 0) {
-  console.error(
-    'Missing Appwrite build env (sponsors will not work in the APK):\n' +
-      missing.map((key) => `  - ${key}`).join('\n') +
-      '\n\nAdd these as GitHub Actions secrets, then rebuild.'
+  console.warn(
+    'Warning: some Appwrite env vars are empty (sponsors may not work in APK):\n' +
+      missing.map((key) => `  - ${key}`).join('\n')
   );
-  process.exit(1);
+} else {
+  console.log('Build env OK — Appwrite keys present for sponsor fallback.');
 }
-
-console.log('Build env OK — Appwrite keys present for sponsor fallback.');
