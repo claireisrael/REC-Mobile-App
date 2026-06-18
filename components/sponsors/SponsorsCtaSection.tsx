@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { colors } from '@/constants/theme';
+import { routes } from '@/lib/routes';
 import type { Conference } from '@/lib/types';
 
 type SponsorsCtaSectionProps = {
@@ -35,7 +36,7 @@ export function SponsorsCtaSection({ conference }: SponsorsCtaSectionProps) {
 
           <Pressable
             style={({ pressed }) => [styles.secondaryBtn, pressed && styles.secondaryBtnPressed]}
-            onPress={() => router.push('/about')}
+            onPress={() => router.navigate(routes.about)}
           >
             <Text style={styles.secondaryBtnText}>Learn More</Text>
             <Ionicons name="arrow-forward" size={16} color={colors.primary} />

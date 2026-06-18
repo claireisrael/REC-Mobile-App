@@ -26,6 +26,7 @@ import { getHomeStats } from '@/lib/conference-home-utils';
 import { getConferenceInfo } from '@/lib/conference-info';
 import { getHeroImageSource } from '@/lib/hero-image';
 import { formatDateRange } from '@/lib/program-utils';
+import { routes } from '@/lib/routes';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -64,6 +65,52 @@ export default function HomeScreen() {
   const heroBackground = getHeroImageSource(conference.heroImageUrl);
   const dateRange = formatDateRange(conference.startDate, conference.endDate);
 
+  const heroContent = (
+    <LinearGradient
+      colors={[
+        'rgba(5,61,73,0.18)',
+        'rgba(5,61,73,0.38)',
+        'rgba(5,61,73,0.62)',
+      ]}
+      locations={[0, 0.45, 1]}
+      style={styles.heroOverlay}
+    >
+      <View style={[styles.heroContent, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.heroTitle} numberOfLines={3}>
+          {heroTitle}
+        </Text>
+        <Text style={styles.heroDate}>{dateRange}</Text>
+
+        <View style={styles.heroActions}>
+          <Pressable
+            style={({ pressed }) => [styles.programButton, pressed && styles.programButtonPressed]}
+            onPress={() => router.navigate(routes.program)}
+          >
+            <Ionicons name="calendar-outline" size={16} color={colors.white} />
+            <Text style={styles.programButtonText}>View Program</Text>
+          </Pressable>
+
+          {conference.registrationOpen ? (
+            <Pressable
+              style={({ pressed }) => [styles.registerButton, pressed && styles.registerButtonPressed]}
+              onPress={() => router.navigate(routes.register)}
+            >
+              <Text style={styles.registerButtonText}>Register Now</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.text} />
+            </Pressable>
+          ) : (
+            <View style={styles.closedPill}>
+              <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.85)" />
+              <Text style={styles.closedPillText} numberOfLines={1}>
+                {conference.regClosedMessage || 'Opening soon'}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </LinearGradient>
+  );
+
   return (
     <ScrollView
       style={styles.screen}
@@ -75,62 +122,18 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      <ImageBackground
-        source={heroBackground}
-        style={styles.hero}
-        imageStyle={styles.heroImage}
-        resizeMode="cover"
-      >
-        <LinearGradient
-          colors={[
-            'rgba(5,61,73,0.18)',
-            'rgba(5,61,73,0.38)',
-            'rgba(5,61,73,0.62)',
-          ]}
-          locations={[0, 0.45, 1]}
-          style={styles.heroOverlay}
+      {heroBackground ? (
+        <ImageBackground
+          source={heroBackground}
+          style={styles.hero}
+          imageStyle={styles.heroImage}
+          resizeMode="cover"
         >
-          <View style={[styles.heroContent, { paddingTop: insets.top + 16 }]}>
-            <Text style={styles.heroTitle} numberOfLines={3}>
-              {heroTitle}
-            </Text>
-            <Text style={styles.heroDate}>{dateRange}</Text>
-
-            <View style={styles.heroActions}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.programButton,
-                  pressed && styles.programButtonPressed,
-                ]}
-                onPress={() => router.push('/program')}
-              >
-                <Ionicons name="calendar-outline" size={16} color={colors.white} />
-                <Text style={styles.programButtonText}>View Program</Text>
-              </Pressable>
-
-              {conference.registrationOpen ? (
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.registerButton,
-                    pressed && styles.registerButtonPressed,
-                  ]}
-                  onPress={() => router.push('/register')}
-                >
-                  <Text style={styles.registerButtonText}>Register Now</Text>
-                  <Ionicons name="arrow-forward" size={16} color={colors.text} />
-                </Pressable>
-              ) : (
-                <View style={styles.closedPill}>
-                  <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.85)" />
-                  <Text style={styles.closedPillText} numberOfLines={1}>
-                    {conference.regClosedMessage || 'Opening soon'}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </LinearGradient>
-      </ImageBackground>
+          {heroContent}
+        </ImageBackground>
+      ) : (
+        <View style={styles.hero}>{heroContent}</View>
+      )}
 
       {homeStats ? (
         <HomeStatsBar daysCount={homeStats.daysCount} speakers={homeStats.speakers} />

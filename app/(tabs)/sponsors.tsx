@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -13,7 +13,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { getConferenceInfo } from '@/lib/conference-info';
 
 export default function SponsorsScreen() {
-  const { conference: liveConference, sponsorCategories, sponsors, loading, error, sponsorsError, refresh } =
+  const { conference: liveConference, sponsorCategories, sponsors, loading, error, sponsorsError, refresh, refreshSponsors } =
     useAppData();
   const conference = getConferenceInfo(liveConference);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,8 +30,13 @@ export default function SponsorsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await refresh();
+    await refreshSponsors();
     setRefreshing(false);
   };
+
+  useEffect(() => {
+    void refreshSponsors();
+  }, [refreshSponsors]);
 
   if (loading && !liveConference) {
     return <LoadingState />;

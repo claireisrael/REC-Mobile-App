@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { colors } from '@/constants/theme';
+import { routes } from '@/lib/routes';
 import { flattenSponsorsForShowcase } from '@/lib/sponsor-utils';
 import type { Conference, Sponsor, SponsorCategory } from '@/lib/types';
 
@@ -54,7 +55,7 @@ export function SponsorShowcase({ conference, categories, sponsors }: SponsorSho
         investment, and sector growth.
       </Text>
 
-      <Pressable style={styles.viewAllButton} onPress={() => router.push('/sponsors')}>
+      <Pressable style={styles.viewAllButton} onPress={() => router.navigate(routes.sponsors)}>
         <Text style={styles.viewAllText}>View All Sponsors</Text>
         <Ionicons name="arrow-forward" size={16} color={colors.white} />
       </Pressable>

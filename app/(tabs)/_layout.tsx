@@ -9,6 +9,8 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
+        freezeOnBlur: false,
+        lazy: false,
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home' }} />

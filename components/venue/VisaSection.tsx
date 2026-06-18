@@ -3,6 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { colors } from '@/constants/theme';
+import { routes } from '@/lib/routes';
 
 const VISA_PORTAL_URL = 'https://visas.immigration.go.ug/';
 
@@ -31,7 +32,7 @@ export function VisaSection({ registrationOpen }: VisaSectionProps) {
         {registrationOpen ? (
           <Pressable
             style={({ pressed }) => [styles.registerBtn, pressed && styles.registerBtnPressed]}
-            onPress={() => router.push('/register')}
+            onPress={() => router.navigate(routes.register)}
           >
             <Text style={styles.registerBtnText}>Register & Request Visa Letter</Text>
             <Ionicons name="arrow-forward" size={16} color={colors.white} />

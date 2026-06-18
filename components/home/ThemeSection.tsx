@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { colors } from '@/constants/theme';
+import { routes } from '@/lib/routes';
 import type { Conference } from '@/lib/types';
 
 type ThemeSectionProps = {
@@ -49,7 +50,7 @@ export function ThemeSection({ conference }: ThemeSectionProps) {
 
           <Pressable
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-            onPress={() => router.push('/about')}
+            onPress={() => router.navigate(routes.about)}
           >
             <Text style={styles.buttonText}>Learn More About the Conference</Text>
             <Ionicons name="arrow-forward" size={16} color={colors.white} />

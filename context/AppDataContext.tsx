@@ -27,6 +27,7 @@ type AppDataContextValue = {
   sponsorsError: string;
   isPreviewMode: boolean;
   refresh: () => Promise<void>;
+  refreshSponsors: () => Promise<void>;
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
@@ -64,7 +65,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadSponsors = useCallback(
-    async (conferenceId: string, programData: Parameters<typeof loadConferenceSponsors>[1]) => {
+    async (conferenceId: string, programData?: Parameters<typeof loadConferenceSponsors>[1]) => {
       try {
         const sponsorData = await loadConferenceSponsors(conferenceId, programData);
         setSponsorCategories(sponsorData.categories);
@@ -80,6 +81,11 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     },
     []
   );
+
+  const refreshSponsors = useCallback(async () => {
+    if (previewMode || !conference?.$id) return;
+    await loadSponsors(conference.$id);
+  }, [conference?.$id, loadSponsors, previewMode]);
 
   const refresh = useCallback(async () => {
     clearLoadTimeout();
@@ -108,10 +114,13 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setProgram(programData.program);
       setSessions(programData.sessions || []);
       setTimeBlocks(programData.timeBlocks || []);
+      if (programData.sponsorCategories?.length || programData.sponsors?.length) {
+        setSponsorCategories(programData.sponsorCategories || []);
+        setSponsors(programData.sponsors || []);
+      }
       setError('');
       setLoading(false);
-
-      void loadSponsors(programData.conference.$id, programData);
+      // Sponsors are loaded only when the Sponsors tab is opened — not on app start.
     } catch (err) {
       setConference(null);
       setProgram(null);
@@ -125,7 +134,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     } finally {
       clearLoadTimeout();
     }
-  }, [clearLoadTimeout, loadPreviewData, loadSponsors, previewMode]);
+  }, [clearLoadTimeout, loadPreviewData, previewMode]);
 
   useEffect(() => {
     refresh();
@@ -145,6 +154,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       sponsorsError,
       isPreviewMode: previewMode,
       refresh,
+      refreshSponsors,
     }),
     [
       conference,
@@ -158,6 +168,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       sponsorsError,
       previewMode,
       refresh,
+      refreshSponsors,
     ]
   );
 

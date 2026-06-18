@@ -3,6 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { colors } from '@/constants/theme';
+import { routes } from '@/lib/routes';
 import type { Conference } from '@/lib/types';
 
 type HomeCtaSectionProps = {
@@ -31,7 +32,7 @@ export function HomeCtaSection({ conference }: HomeCtaSectionProps) {
           {conference.registrationOpen ? (
             <Pressable
               style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-              onPress={() => router.push('/register')}
+              onPress={() => router.navigate(routes.register)}
             >
               <Text style={styles.primaryButtonText}>Register Now</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.text} />
@@ -47,7 +48,7 @@ export function HomeCtaSection({ conference }: HomeCtaSectionProps) {
 
           <Pressable
             style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
-            onPress={() => router.push('/about')}
+            onPress={() => router.navigate(routes.about)}
           >
             <Text style={styles.secondaryButtonText}>Learn More</Text>
             <Ionicons name="arrow-forward" size={16} color={colors.white} />

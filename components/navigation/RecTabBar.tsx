@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
+import { tabHref } from '@/lib/routes';
 
 type TabConfig = {
   routeName: string;
@@ -29,6 +31,7 @@ const TAB_CONFIG: TabConfig[] = [
 
 export function RecTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -46,8 +49,9 @@ export function RecTabBar({ state, descriptors, navigation }: BottomTabBarProps)
               target: route.key,
               canPreventDefault: true,
             });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+            if (event.defaultPrevented) return;
+            if (!isFocused) {
+              router.navigate(tabHref(route.name));
             }
           };
 

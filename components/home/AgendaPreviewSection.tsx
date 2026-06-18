@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { colors } from '@/constants/theme';
+import { routes } from '@/lib/routes';
 import { formatAgendaDayDate, type ConferenceDay } from '@/lib/conference-home-utils';
 
 type AgendaPreviewSectionProps = {
@@ -49,7 +50,7 @@ export function AgendaPreviewSection({ days }: AgendaPreviewSectionProps) {
 
       <Pressable
         style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-        onPress={() => router.push('/program')}
+        onPress={() => router.navigate(routes.program)}
       >
         <Text style={styles.buttonText}>View Full Program</Text>
         <Ionicons name="arrow-forward" size={16} color={colors.primary} />

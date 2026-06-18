@@ -1,4 +1,5 @@
 import { isAppwriteConfigured } from '@/lib/config';
+import { isAppwriteRuntimeSupported } from '@/lib/appwrite-runtime';
 import { fetchPublicSponsorsData } from '@/lib/public-sponsors-api';
 import type { PublicProgramData, Sponsor, SponsorCategory } from '@/lib/types';
 
@@ -36,44 +37,39 @@ export async function loadConferenceSponsors(
   conferenceId: string,
   programData?: Pick<PublicProgramData, 'sponsorCategories' | 'sponsors'>
 ): Promise<SponsorBundle> {
-  const fromProgram = fromProgramData(programData);
-  if (fromProgram && (fromProgram.categories.length > 0 || fromProgram.sponsors.length > 0)) {
-    return fromProgram;
-  }
-
   try {
-    const sponsorData = await fetchPublicSponsorsData();
-    return {
-      categories: sponsorData.categories || [],
-      sponsors: sponsorData.sponsors || [],
-    };
-  } catch (publicError) {
-    if (isAppwriteConfigured()) {
-      try {
-        const { apiService } = await import('@/lib/api-service');
-        return await withTimeout(
-          apiService.getConferenceSponsors(conferenceId),
-          APPWRITE_TIMEOUT_MS,
-          'Sponsors request timed out. Please try again.'
-        );
-      } catch {
-        return { categories: [], sponsors: [] };
-      }
-    }
-
-    if (fromProgram) {
+    const fromProgram = fromProgramData(programData);
+    if (fromProgram && (fromProgram.categories.length > 0 || fromProgram.sponsors.length > 0)) {
       return fromProgram;
     }
 
-    if (publicError instanceof Error) {
-      if (publicError.message.toLowerCase().includes('failed to fetch')) {
-        throw new Error(
-          'Could not reach the sponsors API. Deploy the latest rec-registration web app, or add Appwrite keys to rec-mobile/.env.'
-        );
+    try {
+      const sponsorData = await fetchPublicSponsorsData();
+      return {
+        categories: sponsorData.categories || [],
+        sponsors: sponsorData.sponsors || [],
+      };
+    } catch (publicError) {
+      if (isAppwriteConfigured() && isAppwriteRuntimeSupported()) {
+        try {
+          const { apiService } = await import('@/lib/api-service');
+          return await withTimeout(
+            apiService.getConferenceSponsors(conferenceId),
+            APPWRITE_TIMEOUT_MS,
+            'Sponsors request timed out. Please try again.'
+          );
+        } catch {
+          return { categories: [], sponsors: [] };
+        }
       }
-      throw publicError;
-    }
 
-    throw new Error('Failed to fetch sponsors');
+      if (fromProgram) {
+        return fromProgram;
+      }
+
+      return { categories: [], sponsors: [] };
+    }
+  } catch {
+    return { categories: [], sponsors: [] };
   }
 }

@@ -1,17 +1,15 @@
 import type { ImageSourcePropType } from 'react-native';
 
 /**
- * Local hero background — replace with your own image:
- *   rec-mobile/assets/images/hero.jpg
- * (JPG or PNG; if PNG, change the require below to hero.png)
- *
- * When Appwrite is connected, conference.heroImageUrl from the API is used instead.
+ * Hero background from the API when available.
+ * No local fallback image — bundled hero.jpg was corrupt and crashed release builds.
  */
-const LOCAL_HERO_IMAGE = require('../assets/images/hero.jpg');
+export function getHeroImageSource(remoteUrl?: string): ImageSourcePropType | null {
+  const url = remoteUrl?.trim();
+  if (!url) return null;
+  return { uri: url };
+}
 
-export function getHeroImageSource(remoteUrl?: string): ImageSourcePropType {
-  if (remoteUrl) {
-    return { uri: remoteUrl };
-  }
-  return LOCAL_HERO_IMAGE;
+export function hasHeroImage(remoteUrl?: string): boolean {
+  return Boolean(remoteUrl?.trim());
 }
