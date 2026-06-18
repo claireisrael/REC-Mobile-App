@@ -1,12 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { NrepLoader } from '@/components/ui/NrepLoader';
 import { colors } from '@/constants/theme';
 
 export function LoadingState() {
   return (
     <View style={styles.container}>
-      <NrepLoader size={100} />
+      <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );
 }

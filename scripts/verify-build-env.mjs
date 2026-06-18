@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 
-const requiredForSponsors = [
+const required = [
   'EXPO_PUBLIC_APPWRITE_ENDPOINT',
   'EXPO_PUBLIC_APPWRITE_PROJECT_ID',
   'EXPO_PUBLIC_APPWRITE_DATABASE_ID',
@@ -18,13 +18,15 @@ const values = Object.fromEntries(
     })
 );
 
-const missing = requiredForSponsors.filter((key) => !values[key]?.trim());
+const missing = required.filter((key) => !values[key]?.trim());
 
 if (missing.length > 0) {
-  console.warn(
-    'Warning: some Appwrite env vars are empty (sponsors may not work in APK):\n' +
-      missing.map((key) => `  - ${key}`).join('\n')
+  console.error(
+    'Build blocked: required Appwrite env vars are empty in .env:\n' +
+      missing.map((key) => `  - ${key}`).join('\n') +
+      '\n\nCheck GitHub secrets (ENDPOINT, PROJECT_ID, DATABASE, CONFERENCES, …) are set.'
   );
-} else {
-  console.log('Build env OK — Appwrite keys present for sponsor fallback.');
+  process.exit(1);
 }
+
+console.log('Build env OK — required Appwrite keys present.');

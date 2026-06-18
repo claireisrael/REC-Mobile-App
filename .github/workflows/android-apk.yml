@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - feature/sponsors
     tags:
       - 'v*'
   pull_request:
@@ -117,6 +118,11 @@ jobs:
 
       - name: Verify build environment
         run: node scripts/verify-build-env.mjs
+
+      - name: Log env key presence
+        run: |
+          echo "Env keys written (values hidden):"
+          grep -E '^EXPO_PUBLIC_' .env | cut -d= -f1 | sort
 
       - name: Resolve build variant
         id: variant
