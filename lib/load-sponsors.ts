@@ -1,4 +1,3 @@
-import { apiService } from '@/lib/api-service';
 import { isAppwriteConfigured } from '@/lib/config';
 import { fetchPublicSponsorsData } from '@/lib/public-sponsors-api';
 import type { PublicProgramData, Sponsor, SponsorCategory } from '@/lib/types';
@@ -50,11 +49,16 @@ export async function loadConferenceSponsors(
     };
   } catch (publicError) {
     if (isAppwriteConfigured()) {
-      return withTimeout(
-        apiService.getConferenceSponsors(conferenceId),
-        APPWRITE_TIMEOUT_MS,
-        'Sponsors request timed out. Please try again.'
-      );
+      try {
+        const { apiService } = await import('@/lib/api-service');
+        return await withTimeout(
+          apiService.getConferenceSponsors(conferenceId),
+          APPWRITE_TIMEOUT_MS,
+          'Sponsors request timed out. Please try again.'
+        );
+      } catch {
+        return { categories: [], sponsors: [] };
+      }
     }
 
     if (fromProgram) {

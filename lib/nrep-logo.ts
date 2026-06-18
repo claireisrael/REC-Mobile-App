@@ -1,5 +1,5 @@
 /**
- * Official NREP logo — same asset as the web app (`public/NREP.png` / https://rec.nrep.ug/NREP.png).
- * Re-download with: curl -o assets/images/nrep-logo.png https://rec.nrep.ug/NREP.png
+ * Official NREP logo — place your file at assets/images/nrep-logo-source.png
+ * (or nrep-logo.png), then run: npm run icons:generate
  */
 export const NREP_LOGO = require('../assets/images/nrep-logo.png');

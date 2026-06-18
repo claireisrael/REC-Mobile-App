@@ -6,10 +6,12 @@ import sharp from 'sharp';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const imagesDir = path.resolve(__dirname, '../assets/images');
 const sourcePath = path.join(imagesDir, 'nrep-logo-source.png');
+const uploadedPath = path.join(imagesDir, 'nrep-logo.png');
 const outputPath = path.join(imagesDir, 'nrep-logo.png');
 const splashPath = path.join(imagesDir, 'splash-logo.png');
 
 const WHITE_THRESHOLD = 228;
+const BLACK_THRESHOLD = 20;
 
 async function downloadSource() {
   const response = await fetch('https://rec.nrep.ug/NREP.png');
@@ -21,7 +23,7 @@ async function downloadSource() {
   return buffer;
 }
 
-async function removeLightBackground(input) {
+async function removeBackground(input) {
   const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const pixels = Buffer.from(data);
 
@@ -30,7 +32,10 @@ async function removeLightBackground(input) {
     const g = pixels[i + 1];
     const b = pixels[i + 2];
 
-    if (r >= WHITE_THRESHOLD && g >= WHITE_THRESHOLD && b >= WHITE_THRESHOLD) {
+    const isLight = r >= WHITE_THRESHOLD && g >= WHITE_THRESHOLD && b >= WHITE_THRESHOLD;
+    const isDark = r <= BLACK_THRESHOLD && g <= BLACK_THRESHOLD && b <= BLACK_THRESHOLD;
+
+    if (isLight || isDark) {
       pixels[i + 3] = 0;
     }
   }
@@ -73,9 +78,11 @@ async function buildSplashLogo(logoBuffer) {
 
 const input = (await fs.stat(sourcePath).catch(() => null))
   ? await fs.readFile(sourcePath)
-  : await downloadSource();
+  : (await fs.stat(uploadedPath).catch(() => null))
+    ? await fs.readFile(uploadedPath)
+    : await downloadSource();
 
-const transparentLogo = await removeLightBackground(input);
+const transparentLogo = await removeBackground(input);
 const splashLogo = await buildSplashLogo(transparentLogo);
 
 await Promise.all([
