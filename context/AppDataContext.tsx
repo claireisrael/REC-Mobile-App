@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getOfflineProgramBundle } from '@/lib/conference-info';
 import { loadConferenceSponsors } from '@/lib/load-sponsors';
@@ -13,7 +13,7 @@ import type {
   TimeBlock,
 } from '@/lib/types';
 
-const SPONSORS_TIMEOUT_MS = 12000;
+const LOAD_TIMEOUT_MS = 20000;
 
 type AppDataContextValue = {
   conference: Conference | null;
@@ -23,7 +23,6 @@ type AppDataContextValue = {
   sponsorCategories: SponsorCategory[];
   sponsors: Sponsor[];
   loading: boolean;
-  sponsorsLoading: boolean;
   error: string;
   sponsorsError: string;
   isPreviewMode: boolean;
@@ -32,20 +31,9 @@ type AppDataContextValue = {
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
-async function loadSponsorsWithTimeout(
-  conferenceId: string,
-  programData: Parameters<typeof loadConferenceSponsors>[1]
-) {
-  return Promise.race([
-    loadConferenceSponsors(conferenceId, programData),
-    new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Sponsors request timed out. Please try again.')), SPONSORS_TIMEOUT_MS);
-    }),
-  ]);
-}
-
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const previewMode = isPreviewMode();
+  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [conference, setConference] = useState<Conference | null>(null);
   const [program, setProgram] = useState<Program | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -53,9 +41,15 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [sponsorCategories, setSponsorCategories] = useState<SponsorCategory[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sponsorsLoading, setSponsorsLoading] = useState(false);
   const [error, setError] = useState('');
   const [sponsorsError, setSponsorsError] = useState('');
+
+  const clearLoadTimeout = useCallback(() => {
+    if (loadTimeoutRef.current) {
+      clearTimeout(loadTimeoutRef.current);
+      loadTimeoutRef.current = null;
+    }
+  }, []);
 
   const loadPreviewData = useCallback(() => {
     const bundle = getOfflineProgramBundle();
@@ -67,32 +61,29 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setSponsors([]);
     setSponsorsError('');
     setError('');
-    setSponsorsLoading(false);
   }, []);
 
   const loadSponsors = useCallback(
     async (conferenceId: string, programData: Parameters<typeof loadConferenceSponsors>[1]) => {
-      setSponsorsLoading(true);
-      setSponsorsError('');
-
       try {
-        const sponsorData = await loadSponsorsWithTimeout(conferenceId, programData);
+        const sponsorData = await loadConferenceSponsors(conferenceId, programData);
         setSponsorCategories(sponsorData.categories);
         setSponsors(sponsorData.sponsors);
+        setSponsorsError('');
       } catch (sponsorErr) {
         setSponsorCategories([]);
         setSponsors([]);
         setSponsorsError(
           sponsorErr instanceof Error ? sponsorErr.message : 'Failed to fetch sponsors'
         );
-      } finally {
-        setSponsorsLoading(false);
       }
     },
     []
   );
 
   const refresh = useCallback(async () => {
+    clearLoadTimeout();
+
     if (previewMode) {
       loadPreviewData();
       setLoading(false);
@@ -103,6 +94,13 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setError('');
     setSponsorsError('');
 
+    loadTimeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      setError((current) =>
+        current || 'Loading timed out. Check your internet connection and tap Try again.'
+      );
+    }, LOAD_TIMEOUT_MS);
+
     try {
       const programData = await fetchPublicProgramData();
 
@@ -110,6 +108,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setProgram(programData.program);
       setSessions(programData.sessions || []);
       setTimeBlocks(programData.timeBlocks || []);
+      setError('');
       setLoading(false);
 
       void loadSponsors(programData.conference.$id, programData);
@@ -123,12 +122,15 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setSponsorsError('');
       setError(err instanceof Error ? err.message : 'Failed to fetch conference program');
       setLoading(false);
+    } finally {
+      clearLoadTimeout();
     }
-  }, [loadPreviewData, loadSponsors, previewMode]);
+  }, [clearLoadTimeout, loadPreviewData, loadSponsors, previewMode]);
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    return clearLoadTimeout;
+  }, [refresh, clearLoadTimeout]);
 
   const value = useMemo(
     () => ({
@@ -139,7 +141,6 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       sponsorCategories,
       sponsors,
       loading,
-      sponsorsLoading,
       error,
       sponsorsError,
       isPreviewMode: previewMode,
@@ -153,7 +154,6 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       sponsorCategories,
       sponsors,
       loading,
-      sponsorsLoading,
       error,
       sponsorsError,
       previewMode,

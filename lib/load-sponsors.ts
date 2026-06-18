@@ -3,10 +3,21 @@ import { isAppwriteConfigured } from '@/lib/config';
 import { fetchPublicSponsorsData } from '@/lib/public-sponsors-api';
 import type { PublicProgramData, Sponsor, SponsorCategory } from '@/lib/types';
 
+const APPWRITE_TIMEOUT_MS = 10000;
+
 type SponsorBundle = {
   categories: SponsorCategory[];
   sponsors: Sponsor[];
 };
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
 
 function fromProgramData(programData?: Pick<PublicProgramData, 'sponsorCategories' | 'sponsors'>): SponsorBundle | null {
   const categories = programData?.sponsorCategories;
@@ -39,7 +50,11 @@ export async function loadConferenceSponsors(
     };
   } catch (publicError) {
     if (isAppwriteConfigured()) {
-      return apiService.getConferenceSponsors(conferenceId);
+      return withTimeout(
+        apiService.getConferenceSponsors(conferenceId),
+        APPWRITE_TIMEOUT_MS,
+        'Sponsors request timed out. Please try again.'
+      );
     }
 
     if (fromProgram) {
