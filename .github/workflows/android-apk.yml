@@ -127,6 +127,17 @@ jobs:
       - name: Build APK
         env:
           ANDROID_VERSION_CODE: ${{ github.run_number }}
+          EXPO_PUBLIC_API_BASE_URL: https://rec.nrep.ug
+          EXPO_PUBLIC_OFFLINE_MODE: 'false'
+          EXPO_PUBLIC_APPWRITE_ENDPOINT: ${{ secrets.ENDPOINT }}
+          EXPO_PUBLIC_APPWRITE_PROJECT_ID: ${{ secrets.PROJECT_ID }}
+          EXPO_PUBLIC_APPWRITE_DATABASE_ID: ${{ secrets.DATABASE }}
+          EXPO_PUBLIC_APPWRITE_CONFERENCES_COLLECTION_ID: ${{ secrets.CONFERENCES }}
+          EXPO_PUBLIC_APPWRITE_SESSIONS_COLLECTION_ID: ${{ secrets.SESSIONS }}
+          EXPO_PUBLIC_APPWRITE_PROGRAMS_COLLECTION_ID: ${{ secrets.PROGRAMS }}
+          EXPO_PUBLIC_APPWRITE_PROGRAM_TIME_BLOCKS_COLLECTION_ID: ${{ secrets.TIME_BLOCKS }}
+          EXPO_PUBLIC_APPWRITE_SPONSOR_CATEGORIES_COLLECTION_ID: ${{ secrets.SPONSOR }}
+          EXPO_PUBLIC_APPWRITE_SPONSORS_COLLECTION_ID: ${{ secrets.SPONSORS_COLLECTION }}
         run: |
           cd android
           chmod +x gradlew

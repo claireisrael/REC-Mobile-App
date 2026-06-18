@@ -13,6 +13,8 @@ import type {
   TimeBlock,
 } from '@/lib/types';
 
+const SPONSORS_TIMEOUT_MS = 12000;
+
 type AppDataContextValue = {
   conference: Conference | null;
   program: Program | null;
@@ -21,6 +23,7 @@ type AppDataContextValue = {
   sponsorCategories: SponsorCategory[];
   sponsors: Sponsor[];
   loading: boolean;
+  sponsorsLoading: boolean;
   error: string;
   sponsorsError: string;
   isPreviewMode: boolean;
@@ -28,6 +31,18 @@ type AppDataContextValue = {
 };
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
+
+async function loadSponsorsWithTimeout(
+  conferenceId: string,
+  programData: Parameters<typeof loadConferenceSponsors>[1]
+) {
+  return Promise.race([
+    loadConferenceSponsors(conferenceId, programData),
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Sponsors request timed out. Please try again.')), SPONSORS_TIMEOUT_MS);
+    }),
+  ]);
+}
 
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const previewMode = isPreviewMode();
@@ -38,6 +53,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [sponsorCategories, setSponsorCategories] = useState<SponsorCategory[]>([]);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sponsorsLoading, setSponsorsLoading] = useState(false);
   const [error, setError] = useState('');
   const [sponsorsError, setSponsorsError] = useState('');
 
@@ -51,7 +67,30 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setSponsors([]);
     setSponsorsError('');
     setError('');
+    setSponsorsLoading(false);
   }, []);
+
+  const loadSponsors = useCallback(
+    async (conferenceId: string, programData: Parameters<typeof loadConferenceSponsors>[1]) => {
+      setSponsorsLoading(true);
+      setSponsorsError('');
+
+      try {
+        const sponsorData = await loadSponsorsWithTimeout(conferenceId, programData);
+        setSponsorCategories(sponsorData.categories);
+        setSponsors(sponsorData.sponsors);
+      } catch (sponsorErr) {
+        setSponsorCategories([]);
+        setSponsors([]);
+        setSponsorsError(
+          sponsorErr instanceof Error ? sponsorErr.message : 'Failed to fetch sponsors'
+        );
+      } finally {
+        setSponsorsLoading(false);
+      }
+    },
+    []
+  );
 
   const refresh = useCallback(async () => {
     if (previewMode) {
@@ -71,21 +110,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setProgram(programData.program);
       setSessions(programData.sessions || []);
       setTimeBlocks(programData.timeBlocks || []);
+      setLoading(false);
 
-      try {
-        const sponsorData = await loadConferenceSponsors(
-          programData.conference.$id,
-          programData
-        );
-        setSponsorCategories(sponsorData.categories);
-        setSponsors(sponsorData.sponsors);
-      } catch (sponsorErr) {
-        setSponsorCategories([]);
-        setSponsors([]);
-        setSponsorsError(
-          sponsorErr instanceof Error ? sponsorErr.message : 'Failed to fetch sponsors'
-        );
-      }
+      void loadSponsors(programData.conference.$id, programData);
     } catch (err) {
       setConference(null);
       setProgram(null);
@@ -94,13 +121,10 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setSponsorCategories([]);
       setSponsors([]);
       setSponsorsError('');
-      setError(
-        err instanceof Error ? err.message : 'Failed to fetch conference program'
-      );
-    } finally {
+      setError(err instanceof Error ? err.message : 'Failed to fetch conference program');
       setLoading(false);
     }
-  }, [loadPreviewData, previewMode]);
+  }, [loadPreviewData, loadSponsors, previewMode]);
 
   useEffect(() => {
     refresh();
@@ -115,6 +139,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       sponsorCategories,
       sponsors,
       loading,
+      sponsorsLoading,
       error,
       sponsorsError,
       isPreviewMode: previewMode,
@@ -128,6 +153,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       sponsorCategories,
       sponsors,
       loading,
+      sponsorsLoading,
       error,
       sponsorsError,
       previewMode,

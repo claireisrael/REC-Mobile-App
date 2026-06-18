@@ -1,4 +1,3 @@
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -14,19 +13,10 @@ export { ErrorBoundary } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
 
-const BOOT_TIMEOUT_MS = 4000;
+const BOOT_TIMEOUT_MS = 2500;
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
   const [bootReady, setBootReady] = useState(false);
-
-  useEffect(() => {
-    if (fontError) {
-      console.warn('Custom font failed to load; using system fonts.', fontError);
-    }
-  }, [fontError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,22 +27,15 @@ export default function RootLayout() {
       }
     };
 
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync().finally(finishBoot);
-      return () => {
-        cancelled = true;
-      };
-    }
+    SplashScreen.hideAsync().finally(finishBoot);
 
-    const timeout = setTimeout(() => {
-      SplashScreen.hideAsync().finally(finishBoot);
-    }, BOOT_TIMEOUT_MS);
+    const timeout = setTimeout(finishBoot, BOOT_TIMEOUT_MS);
 
     return () => {
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [fontsLoaded, fontError]);
+  }, []);
 
   if (!bootReady) {
     return (
