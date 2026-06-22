@@ -26,19 +26,29 @@ async function loadFromAppwrite(): Promise<PublicProgramData> {
     throw new Error('No published program is available yet.');
   }
 
-  const [sessions, timeBlocks, sponsorData] = await Promise.all([
+  const [sessions, timeBlocks] = await Promise.all([
     apiService.getPublishedSessions(program.$id),
     apiService.getProgramTimeBlocks(program.$id),
-    apiService.getConferenceSponsors(conference.$id),
   ]);
+
+  // Sponsors load separately so a sponsor failure never blocks the program (matches web).
+  let sponsorCategories: PublicProgramData['sponsorCategories'] = [];
+  let sponsors: PublicProgramData['sponsors'] = [];
+  try {
+    const sponsorData = await apiService.getConferenceSponsors(conference.$id);
+    sponsorCategories = sponsorData.categories;
+    sponsors = sponsorData.sponsors;
+  } catch (error) {
+    console.error('Error loading sponsors:', error);
+  }
 
   return {
     conference,
     program,
     sessions,
     timeBlocks,
-    sponsorCategories: sponsorData.categories,
-    sponsors: sponsorData.sponsors,
+    sponsorCategories,
+    sponsors,
   };
 }
 

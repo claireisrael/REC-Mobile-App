@@ -118,6 +118,27 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     try {
       const programData = await loadProgramData();
       applyProgramData(programData);
+
+      const conferenceId = programData.conference?.$id;
+      if (
+        conferenceId &&
+        (programData.sponsors?.length ?? 0) === 0 &&
+        (programData.sponsorCategories?.length ?? 0) === 0
+      ) {
+        try {
+          const sponsorData = await loadConferenceSponsors(conferenceId);
+          if (sponsorData.sponsors.length > 0 || sponsorData.categories.length > 0) {
+            setSponsorCategories(sponsorData.categories);
+            setSponsors(sponsorData.sponsors);
+            setSponsorsError('');
+          }
+        } catch (sponsorErr) {
+          setSponsorsError(
+            sponsorErr instanceof Error ? sponsorErr.message : 'Failed to fetch sponsors'
+          );
+        }
+      }
+
       setLoading(false);
     } catch (err) {
       setConference(null);
