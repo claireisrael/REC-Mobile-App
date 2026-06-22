@@ -8,12 +8,12 @@ import {
   SESSIONS_COLLECTION_ID,
   SPONSOR_CATEGORIES_COLLECTION_ID,
   SPONSORS_COLLECTION_ID,
-  databases,
+  getDatabases,
 } from './appwrite-config';
 
 export const apiService = {
   async getActiveConference(): Promise<Conference | null> {
-    const response = await databases.listDocuments(DATABASE_ID, CONFERENCES_COLLECTION_ID, [
+    const response = await getDatabases().listDocuments(DATABASE_ID, CONFERENCES_COLLECTION_ID, [
       Query.equal('isActive', true),
       Query.limit(1),
     ]);
@@ -21,7 +21,7 @@ export const apiService = {
   },
 
   async getPublishedProgram(conferenceId: string): Promise<Program | null> {
-    const response = await databases.listDocuments(DATABASE_ID, PROGRAMS_COLLECTION_ID, [
+    const response = await getDatabases().listDocuments(DATABASE_ID, PROGRAMS_COLLECTION_ID, [
       Query.equal('conferenceId', conferenceId),
       Query.equal('status', 'PUBLISHED'),
       Query.limit(1),
@@ -30,7 +30,7 @@ export const apiService = {
   },
 
   async getPublishedSessions(programId: string): Promise<Session[]> {
-    const response = await databases.listDocuments(DATABASE_ID, SESSIONS_COLLECTION_ID, [
+    const response = await getDatabases().listDocuments(DATABASE_ID, SESSIONS_COLLECTION_ID, [
       Query.equal('programId', programId),
       Query.equal('status', 'PUBLISHED'),
       Query.orderAsc('day'),
@@ -44,7 +44,7 @@ export const apiService = {
     if (!PROGRAM_TIME_BLOCKS_COLLECTION_ID) return [];
 
     try {
-      const response = await databases.listDocuments(
+      const response = await getDatabases().listDocuments(
         DATABASE_ID,
         PROGRAM_TIME_BLOCKS_COLLECTION_ID,
         [
@@ -64,7 +64,7 @@ export const apiService = {
     if (!SPONSOR_CATEGORIES_COLLECTION_ID || !conferenceId) return [];
 
     try {
-      const response = await databases.listDocuments(
+      const response = await getDatabases().listDocuments(
         DATABASE_ID,
         SPONSOR_CATEGORIES_COLLECTION_ID,
         [
@@ -84,7 +84,7 @@ export const apiService = {
     if (!SPONSORS_COLLECTION_ID || !conferenceId) return [];
 
     try {
-      const response = await databases.listDocuments(DATABASE_ID, SPONSORS_COLLECTION_ID, [
+      const response = await getDatabases().listDocuments(DATABASE_ID, SPONSORS_COLLECTION_ID, [
         Query.equal('conferenceId', conferenceId),
         Query.equal('isActive', true),
         Query.orderAsc('displayOrder'),

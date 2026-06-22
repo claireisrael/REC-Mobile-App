@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getOfflineProgramBundle } from '@/lib/conference-info';
+import { isAppwriteConfigured } from '@/lib/config';
 import { loadConferenceSponsors } from '@/lib/load-sponsors';
 import { isPreviewMode } from '@/lib/offline-mode';
 import { fetchPublicProgramData } from '@/lib/public-program-api';
@@ -120,7 +121,15 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       }
       setError('');
       setLoading(false);
-      // Sponsors are loaded only when the Sponsors tab is opened — not on app start.
+
+      const hasSponsorsFromProgram =
+        programData.sponsorCategories?.length || programData.sponsors?.length;
+      if (!hasSponsorsFromProgram && isAppwriteConfigured()) {
+        // Load partners after home is visible — same Appwrite source as web, not on critical boot path.
+        setTimeout(() => {
+          void loadSponsors(programData.conference.$id, programData).catch(() => undefined);
+        }, 3000);
+      }
     } catch (err) {
       setConference(null);
       setProgram(null);

@@ -1,5 +1,4 @@
 import { isAppwriteConfigured } from '@/lib/config';
-import { isAppwriteRuntimeSupported } from '@/lib/appwrite-runtime';
 import { fetchPublicSponsorsData } from '@/lib/public-sponsors-api';
 import type { PublicProgramData, Sponsor, SponsorCategory } from '@/lib/types';
 
@@ -33,6 +32,15 @@ function fromProgramData(programData?: Pick<PublicProgramData, 'sponsorCategorie
   };
 }
 
+async function loadFromAppwrite(conferenceId: string): Promise<SponsorBundle> {
+  const { apiService } = await import('@/lib/api-service');
+  return withTimeout(
+    apiService.getConferenceSponsors(conferenceId),
+    APPWRITE_TIMEOUT_MS,
+    'Sponsors request timed out. Please try again.'
+  );
+}
+
 export async function loadConferenceSponsors(
   conferenceId: string,
   programData?: Pick<PublicProgramData, 'sponsorCategories' | 'sponsors'>
@@ -43,30 +51,22 @@ export async function loadConferenceSponsors(
       return fromProgram;
     }
 
+    // Same as web sponsors page: Appwrite when keys are configured.
+    if (isAppwriteConfigured()) {
+      try {
+        return await loadFromAppwrite(conferenceId);
+      } catch {
+        // Fall through to public API.
+      }
+    }
+
     try {
       const sponsorData = await fetchPublicSponsorsData();
       return {
         categories: sponsorData.categories || [],
         sponsors: sponsorData.sponsors || [],
       };
-    } catch (publicError) {
-      if (isAppwriteConfigured() && isAppwriteRuntimeSupported()) {
-        try {
-          const { apiService } = await import('@/lib/api-service');
-          return await withTimeout(
-            apiService.getConferenceSponsors(conferenceId),
-            APPWRITE_TIMEOUT_MS,
-            'Sponsors request timed out. Please try again.'
-          );
-        } catch {
-          return { categories: [], sponsors: [] };
-        }
-      }
-
-      if (fromProgram) {
-        return fromProgram;
-      }
-
+    } catch {
       return { categories: [], sponsors: [] };
     }
   } catch {
