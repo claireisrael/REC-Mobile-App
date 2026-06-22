@@ -1,10 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getOfflineProgramBundle } from '@/lib/conference-info';
-import { isAppwriteConfigured } from '@/lib/config';
 import { loadConferenceSponsors } from '@/lib/load-sponsors';
+import { loadProgramData } from '@/lib/load-program-data';
 import { isPreviewMode } from '@/lib/offline-mode';
-import { fetchPublicProgramData } from '@/lib/public-program-api';
 import type {
   Conference,
   Program,
@@ -65,28 +64,36 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     setError('');
   }, []);
 
-  const loadSponsors = useCallback(
-    async (conferenceId: string, programData?: Parameters<typeof loadConferenceSponsors>[1]) => {
-      try {
-        const sponsorData = await loadConferenceSponsors(conferenceId, programData);
-        setSponsorCategories(sponsorData.categories);
-        setSponsors(sponsorData.sponsors);
-        setSponsorsError('');
-      } catch (sponsorErr) {
-        setSponsorCategories([]);
-        setSponsors([]);
-        setSponsorsError(
-          sponsorErr instanceof Error ? sponsorErr.message : 'Failed to fetch sponsors'
-        );
-      }
+  const applyProgramData = useCallback(
+    (programData: Awaited<ReturnType<typeof loadProgramData>>) => {
+      setConference(programData.conference);
+      setProgram(programData.program);
+      setSessions(programData.sessions || []);
+      setTimeBlocks(programData.timeBlocks || []);
+      setSponsorCategories(programData.sponsorCategories || []);
+      setSponsors(programData.sponsors || []);
+      setSponsorsError('');
+      setError('');
     },
     []
   );
 
   const refreshSponsors = useCallback(async () => {
     if (previewMode || !conference?.$id) return;
-    await loadSponsors(conference.$id);
-  }, [conference?.$id, loadSponsors, previewMode]);
+
+    try {
+      const sponsorData = await loadConferenceSponsors(conference.$id);
+      setSponsorCategories(sponsorData.categories);
+      setSponsors(sponsorData.sponsors);
+      setSponsorsError('');
+    } catch (sponsorErr) {
+      setSponsorCategories([]);
+      setSponsors([]);
+      setSponsorsError(
+        sponsorErr instanceof Error ? sponsorErr.message : 'Failed to fetch sponsors'
+      );
+    }
+  }, [conference?.$id, previewMode]);
 
   const refresh = useCallback(async () => {
     clearLoadTimeout();
@@ -109,27 +116,9 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     }, LOAD_TIMEOUT_MS);
 
     try {
-      const programData = await fetchPublicProgramData();
-
-      setConference(programData.conference);
-      setProgram(programData.program);
-      setSessions(programData.sessions || []);
-      setTimeBlocks(programData.timeBlocks || []);
-      if (programData.sponsorCategories?.length || programData.sponsors?.length) {
-        setSponsorCategories(programData.sponsorCategories || []);
-        setSponsors(programData.sponsors || []);
-      }
-      setError('');
+      const programData = await loadProgramData();
+      applyProgramData(programData);
       setLoading(false);
-
-      const hasSponsorsFromProgram =
-        programData.sponsorCategories?.length || programData.sponsors?.length;
-      if (!hasSponsorsFromProgram && isAppwriteConfigured()) {
-        // Load partners after home is visible — same Appwrite source as web, not on critical boot path.
-        setTimeout(() => {
-          void loadSponsors(programData.conference.$id, programData).catch(() => undefined);
-        }, 3000);
-      }
     } catch (err) {
       setConference(null);
       setProgram(null);
@@ -143,7 +132,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     } finally {
       clearLoadTimeout();
     }
-  }, [clearLoadTimeout, loadPreviewData, previewMode]);
+  }, [applyProgramData, clearLoadTimeout, loadPreviewData, previewMode]);
 
   useEffect(() => {
     refresh();
