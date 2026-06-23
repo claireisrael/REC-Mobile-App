@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 
 import { colors } from '@/constants/theme';
-import { routes } from '@/lib/routes';
 import { flattenSponsorsForShowcase } from '@/lib/sponsor-utils';
 import type { Conference, Sponsor, SponsorCategory } from '@/lib/types';
 
@@ -15,7 +13,6 @@ type SponsorShowcaseProps = {
 };
 
 export function SponsorShowcase({ conference, categories, sponsors }: SponsorShowcaseProps) {
-  const router = useRouter();
   const sponsorItems = useMemo(
     () => {
       const items = flattenSponsorsForShowcase(categories, sponsors);
@@ -54,11 +51,6 @@ export function SponsorShowcase({ conference, categories, sponsors }: SponsorSho
         Meet the organizations supporting renewable energy collaboration, exhibition,
         investment, and sector growth.
       </Text>
-
-      <Pressable style={styles.viewAllButton} onPress={() => router.navigate(routes.sponsors)}>
-        <Text style={styles.viewAllText}>View All Sponsors</Text>
-        <Ionicons name="arrow-forward" size={16} color={colors.white} />
-      </Pressable>
 
       <View style={styles.featuredCard}>
         <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
@@ -176,24 +168,8 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: colors.textMuted,
   },
-  viewAllButton: {
-    marginTop: 16,
-    marginBottom: 16,
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  viewAllText: {
-    color: colors.white,
-    fontWeight: '700',
-    fontSize: 14,
-  },
   featuredCard: {
+    marginTop: 16,
     backgroundColor: colors.white,
     borderRadius: 14,
     borderWidth: 1,

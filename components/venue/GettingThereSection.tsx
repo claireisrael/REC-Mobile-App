@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { getAccommodationCopy } from '@/lib/venue-utils';
@@ -34,6 +34,9 @@ const TRAVEL_ITEMS = [
   },
 ];
 
+const SERENA_ACCOMMODATION_URL =
+  'https://reservations.travelclick.com/17007?groupID=5334251';
+
 export function GettingThereSection({ venue }: GettingThereSectionProps) {
   return (
     <View style={styles.section}>
@@ -48,6 +51,8 @@ export function GettingThereSection({ venue }: GettingThereSectionProps) {
         {TRAVEL_ITEMS.map((item) => {
           const body = item.dynamic ? getAccommodationCopy(venue) : item.body;
 
+          const isAccommodation = item.id === 'hotel';
+
           return (
             <View key={item.id} style={styles.card}>
               <View style={[styles.iconWrap, { backgroundColor: item.color }]}>
@@ -55,6 +60,15 @@ export function GettingThereSection({ venue }: GettingThereSectionProps) {
               </View>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardBody}>{body}</Text>
+              {isAccommodation ? (
+                <Pressable
+                  style={({ pressed }) => [styles.linkBtn, pressed && styles.linkBtnPressed]}
+                  onPress={() => Linking.openURL(SERENA_ACCOMMODATION_URL)}
+                >
+                  <Text style={styles.linkBtnText}>View Serena Hotel accommodation</Text>
+                  <Ionicons name="open-outline" size={14} color={colors.primary} />
+                </Pressable>
+              ) : null}
             </View>
           );
         })}
@@ -123,5 +137,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: colors.textMuted,
+  },
+  linkBtn: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: `${colors.primary}50`,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: `${colors.primary}10`,
+  },
+  linkBtnPressed: {
+    backgroundColor: `${colors.primary}20`,
+  },
+  linkBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

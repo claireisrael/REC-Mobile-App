@@ -18,11 +18,10 @@ type TabConfig = {
 const TAB_CONFIG: TabConfig[] = [
   { routeName: 'index', label: 'Home', icon: 'home-outline', iconFocused: 'home' },
   { routeName: 'program', label: 'Program', icon: 'calendar-outline', iconFocused: 'calendar' },
-  { routeName: 'sponsors', label: 'Sponsors', icon: 'ribbon-outline', iconFocused: 'ribbon' },
-  { routeName: 'venue', label: 'Venue', icon: 'location-outline', iconFocused: 'location' },
+  { routeName: 'sponsors', label: 'Gallery', icon: 'images-outline', iconFocused: 'images' },
   {
     routeName: 'register',
-    label: 'Register',
+    label: 'Registration',
     icon: 'ticket-outline',
     iconFocused: 'ticket',
     accent: true,

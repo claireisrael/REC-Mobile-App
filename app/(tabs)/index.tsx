@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HomeCtaSection } from '@/components/home/HomeCtaSection';
 import { HomeStatsBar } from '@/components/home/HomeStatsBar';
-import { OrganizersSection } from '@/components/home/OrganizersSection';
+import { ViewVenueBadge } from '@/components/home/ViewVenueBadge';
 import { SponsorShowcase } from '@/components/home/SponsorShowcase';
 import { ThemeSection } from '@/components/home/ThemeSection';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -145,7 +145,7 @@ export default function HomeScreen() {
         categories={sponsorCategories}
         sponsors={sponsors}
       />
-      <OrganizersSection />
+      <ViewVenueBadge conference={conference} />
       <HomeCtaSection conference={conference} />
 
       <View style={styles.bottomSpacer} />

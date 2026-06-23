@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
+import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { GettingThereSection } from '@/components/venue/GettingThereSection';
 import { VenueDetailsCard } from '@/components/venue/VenueDetailsCard';
-import { VenueHero } from '@/components/venue/VenueHero';
 import { VenueMapCard } from '@/components/venue/VenueMapCard';
 import { VisaSection } from '@/components/venue/VisaSection';
-import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { colors } from '@/constants/theme';
 import { useAppData } from '@/context/AppDataContext';
 import { getConferenceInfo } from '@/lib/conference-info';
+import { formatDateRange } from '@/lib/program-utils';
 
 export default function VenueScreen() {
   const { conference: liveConference, loading, error, refresh } = useAppData();
@@ -38,17 +39,25 @@ export default function VenueScreen() {
     );
   }
 
+  const shortName = conference.shortName || conference.title || 'the conference';
+  const dateRange = formatDateRange(conference.startDate, conference.endDate);
+
   return (
-    <ScreenContainer>
+    <ScreenContainer safeTop={false}>
       <ScrollView
         style={styles.screen}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <VenueHero conference={conference} />
+        <ScreenHeader
+          showBack
+          title="Venue & Travel"
+          subtitle={`Everything you need to know about getting to ${shortName}${dateRange ? ` · ${dateRange}` : ''}`}
+        />
         <VenueDetailsCard conference={conference} />
         <VenueMapCard conference={conference} />
         <GettingThereSection venue={conference.venue} />
         <VisaSection registrationOpen={conference.registrationOpen} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </ScreenContainer>
   );
@@ -58,5 +67,8 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bottomSpacer: {
+    height: 24,
   },
 });

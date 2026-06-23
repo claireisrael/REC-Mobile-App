@@ -33,6 +33,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="about" />
+          <Stack.Screen name="venue" />
           <Stack.Screen name="session/[id]" />
         </Stack>
       </AppDataProvider>

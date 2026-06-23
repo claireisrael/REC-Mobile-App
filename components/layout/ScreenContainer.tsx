@@ -1,4 +1,4 @@
-import { View, ViewProps } from 'react-native';
+import { Platform, StatusBar, View, ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
@@ -15,12 +15,14 @@ export function ScreenContainer({
   ...props
 }: ScreenContainerProps) {
   const insets = useSafeAreaInsets();
+  const androidStatusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
+  const topInset = Math.max(insets.top, androidStatusBarHeight);
 
   return (
     <View
       style={[
         { flex: 1, backgroundColor: colors.background },
-        safeTop && { paddingTop: insets.top },
+        safeTop && { paddingTop: topInset },
         style,
       ]}
       {...props}

@@ -3,29 +3,31 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 
-export function OrganizersSection() {
+export function AboutOrganizers() {
   return (
     <View style={styles.section}>
       <Text style={styles.eyebrow}>Organized By</Text>
-      <View style={styles.row}>
+      <View style={styles.list}>
         <Pressable style={styles.org} onPress={() => Linking.openURL('https://memd.go.ug/')}>
           <View style={[styles.orgIcon, { backgroundColor: '#15803D' }]}>
-            <Ionicons name="globe-outline" size={22} color={colors.white} />
+            <Ionicons name="globe-outline" size={20} color={colors.white} />
           </View>
-          <View>
+          <View style={styles.orgCopy}>
             <Text style={styles.orgTitle}>Ministry of Energy</Text>
             <Text style={styles.orgSubtitle}>& Mineral Development</Text>
           </View>
+          <Ionicons name="open-outline" size={14} color={colors.textMuted} />
         </Pressable>
 
         <Pressable style={styles.org} onPress={() => Linking.openURL('https://nrep.ug')}>
           <View style={[styles.orgIcon, { backgroundColor: colors.primary }]}>
-            <Ionicons name="sparkles" size={22} color={colors.white} />
+            <Ionicons name="sparkles" size={20} color={colors.white} />
           </View>
-          <View>
+          <View style={styles.orgCopy}>
             <Text style={styles.orgTitle}>NREP</Text>
             <Text style={styles.orgSubtitle}>National Renewable Energy Platform</Text>
           </View>
+          <Ionicons name="open-outline" size={14} color={colors.textMuted} />
         </Pressable>
       </View>
     </View>
@@ -34,45 +36,42 @@ export function OrganizersSection() {
 
 const styles = StyleSheet.create({
   section: {
-    paddingHorizontal: 20,
-    paddingVertical: 28,
-    backgroundColor: '#F8FAFC',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
+    gap: 12,
   },
   eyebrow: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: 20,
+    letterSpacing: 1,
+    textAlign: 'center',
   },
-  row: {
-    width: '100%',
-    gap: 16,
+  list: {
+    gap: 10,
   },
   org: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     backgroundColor: colors.white,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    padding: 14,
   },
   orgIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  orgCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
   orgTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
   },
