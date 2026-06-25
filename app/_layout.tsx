@@ -2,10 +2,11 @@ import { Stack } from 'expo-router';
 import type { ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppDataProvider } from '@/context/AppDataContext';
+import { RecChatbotHost } from '@/components/chatbot/RecChatbotHost';
 import { colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -13,10 +14,10 @@ SplashScreen.preventAutoHideAsync();
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
     <View style={styles.errorScreen}>
-      <Text style={styles.errorTitle}>Something went wrong</Text>
-      <Text style={styles.errorMessage}>{error.message}</Text>
+      <RNText style={styles.errorTitle}>Something went wrong</RNText>
+      <RNText style={styles.errorMessage}>{error.message}</RNText>
       <Pressable style={styles.retryButton} onPress={retry}>
-        <Text style={styles.retryText}>Try again</Text>
+        <RNText style={styles.retryText}>Try again</RNText>
       </Pressable>
     </View>
   );
@@ -30,18 +31,21 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppDataProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="about" />
-          <Stack.Screen name="venue" />
-          <Stack.Screen name="session/[id]" />
-        </Stack>
+        <View style={styles.root}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+          <RecChatbotHost />
+        </View>
       </AppDataProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   errorScreen: {
     flex: 1,
     alignItems: 'center',

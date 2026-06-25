@@ -15,8 +15,11 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
       <Tabs.Screen name="program" options={{ title: 'Program' }} />
-      <Tabs.Screen name="sponsors" options={{ title: 'Gallery' }} />
+      <Tabs.Screen name="sponsors" options={{ title: 'Media' }} />
       <Tabs.Screen name="register" options={{ title: 'Registration' }} />
+      <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
+      <Tabs.Screen name="venue" options={{ href: null, title: 'Venue' }} />
+      <Tabs.Screen name="session/[id]" options={{ href: null, title: 'Session' }} />
     </Tabs>
   );
 }

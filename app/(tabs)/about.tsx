@@ -54,7 +54,7 @@ export default function AboutScreen() {
   const conferenceTitle = conference.title || 'Renewable Energy Conference & Expo';
 
   return (
-    <ScreenContainer safeTop={false}>
+    <ScreenContainer>
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         <ScreenHeader
           showBack

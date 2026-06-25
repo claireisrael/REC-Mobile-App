@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { colors } from '@/constants/theme';
 
 type ErrorStateProps = {
@@ -14,15 +15,17 @@ export function ErrorState({
   onRetry,
 }: ErrorStateProps) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
-      {onRetry ? (
-        <Pressable style={styles.button} onPress={onRetry}>
-          <Text style={styles.buttonText}>Try again</Text>
-        </Pressable>
-      ) : null}
-    </View>
+    <ScreenContainer>
+      <View style={styles.container}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.message}>{message}</Text>
+        {onRetry ? (
+          <Pressable style={styles.button} onPress={onRetry}>
+            <Text style={styles.buttonText}>Try again</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </ScreenContainer>
   );
 }
 
@@ -32,7 +35,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: colors.background,
   },
   title: {
     fontSize: 20,

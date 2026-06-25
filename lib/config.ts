@@ -22,6 +22,9 @@ export const config = {
   apiBaseUrl: trimTrailingSlash(
     pick(process.env.EXPO_PUBLIC_API_BASE_URL, productionDefaults.apiBaseUrl)
   ),
+  recbrainSocketUrl: trimTrailingSlash(
+    pick(process.env.EXPO_PUBLIC_RECBRAIN_SOCKET_URL, '')
+  ),
   appwrite: {
     endpoint: pick(
       process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT,
@@ -71,3 +74,5 @@ export const isAppwriteConfigured = () =>
       config.appwrite.sponsorCategoriesCollectionId &&
       config.appwrite.sponsorsCollectionId
   );
+
+export const isRecbrainConfigured = () => Boolean(config.recbrainSocketUrl);

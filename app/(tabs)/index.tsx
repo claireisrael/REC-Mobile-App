@@ -9,13 +9,17 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { AppStatusBar } from '@/components/layout/AppStatusBar';
 
 import { HomeCtaSection } from '@/components/home/HomeCtaSection';
 import { HomeStatsBar } from '@/components/home/HomeStatsBar';
 import { ViewVenueBadge } from '@/components/home/ViewVenueBadge';
+import { MediaShowcase } from '@/components/home/MediaShowcase';
 import { SponsorShowcase } from '@/components/home/SponsorShowcase';
 import { ThemeSection } from '@/components/home/ThemeSection';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -26,15 +30,43 @@ import { getHomeStats } from '@/lib/conference-home-utils';
 import { getConferenceInfo } from '@/lib/conference-info';
 import { getHeroImageSource } from '@/lib/hero-image';
 import { formatDateRange } from '@/lib/program-utils';
+import { fetchConferenceMedia } from '@/lib/public-media-api';
 import { routes } from '@/lib/routes';
+import type { MediaItem } from '@/lib/types';
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const { conference: liveConference, sponsorCategories, sponsors, loading, error, refresh } =
     useAppData();
   const conference = getConferenceInfo(liveConference);
   const [refreshing, setRefreshing] = useState(false);
+  const [featuredMedia, setFeaturedMedia] = useState<MediaItem[]>([]);
+
+  useEffect(() => {
+    if (!liveConference?.$id) return undefined;
+
+    let cancelled = false;
+
+    const loadFeaturedMedia = async () => {
+      try {
+        const media = await fetchConferenceMedia(liveConference.$id, {
+          featured: true,
+          limit: 8,
+        });
+        if (!cancelled) setFeaturedMedia(media.documents || []);
+      } catch {
+        if (!cancelled) setFeaturedMedia([]);
+      }
+    };
+
+    loadFeaturedMedia();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [liveConference?.$id]);
 
   const homeStats = useMemo(
     () => (conference ? getHomeStats(conference) : null),
@@ -112,10 +144,12 @@ export default function HomeScreen() {
   );
 
   return (
-    <ScrollView
-      style={styles.screen}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
+    <View style={styles.screen}>
+      {isFocused ? <AppStatusBar style="light" /> : null}
+      <ScrollView
+        style={styles.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
       {error ? (
         <View style={styles.warningBanner}>
           <Text style={styles.warningText}>{error}</Text>
@@ -145,16 +179,22 @@ export default function HomeScreen() {
         categories={sponsorCategories}
         sponsors={sponsors}
       />
+      <MediaShowcase conference={conference} items={featuredMedia} />
       <ViewVenueBadge conference={conference} />
       <HomeCtaSection conference={conference} />
 
       <View style={styles.bottomSpacer} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  scroll: {
     flex: 1,
     backgroundColor: colors.background,
   },

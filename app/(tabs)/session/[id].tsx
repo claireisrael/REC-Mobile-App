@@ -4,7 +4,6 @@ import RenderHTML from 'react-native-render-html';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
-import { ErrorState } from '@/components/ui/ErrorState';
 import { colors } from '@/constants/theme';
 import { useSession } from '@/context/AppDataContext';
 import { formatTimeWithTimezone } from '@/lib/program-utils';
@@ -18,7 +17,10 @@ export default function SessionDetailScreen() {
     return (
       <ScreenContainer>
         <ScreenHeader showBack title="Session" />
-        <ErrorState title="Session not found" message="This session may no longer be published." />
+        <View style={styles.missing}>
+          <Text style={styles.missingTitle}>Session not found</Text>
+          <Text style={styles.missingText}>This session may no longer be published.</Text>
+        </View>
       </ScreenContainer>
     );
   }
@@ -130,5 +132,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: colors.textMuted,
+  },
+  missing: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  missingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  missingText: {
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

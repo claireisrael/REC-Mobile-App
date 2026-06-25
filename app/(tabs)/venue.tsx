@@ -43,7 +43,7 @@ export default function VenueScreen() {
   const dateRange = formatDateRange(conference.startDate, conference.endDate);
 
   return (
-    <ScreenContainer safeTop={false}>
+    <ScreenContainer>
       <ScrollView
         style={styles.screen}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

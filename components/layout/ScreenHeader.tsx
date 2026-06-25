@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Platform, Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 
@@ -14,9 +13,6 @@ type ScreenHeaderProps = {
 
 export function ScreenHeader({ title, subtitle, showBack = false, onBack }: ScreenHeaderProps) {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const androidStatusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
-  const topInset = Math.max(insets.top, androidStatusBarHeight);
 
   const handleBack = () => {
     if (onBack) {
@@ -29,7 +25,7 @@ export function ScreenHeader({ title, subtitle, showBack = false, onBack }: Scre
   };
 
   return (
-    <View style={[styles.container, { paddingTop: topInset + 8 }]}>
+    <View style={styles.container}>
       {showBack ? (
         <Pressable style={styles.backButton} onPress={handleBack} hitSlop={12}>
           <Ionicons name="chevron-back" size={22} color={colors.primary} />
@@ -45,6 +41,7 @@ export function ScreenHeader({ title, subtitle, showBack = false, onBack }: Scre
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 12,
     backgroundColor: colors.background,
   },

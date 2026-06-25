@@ -25,6 +25,38 @@ export type Conference = {
   socialsJson?: string;
   year?: number;
   days?: string;
+  mediaCount?: number;
+};
+
+export type MediaSampleImage = {
+  fileId: string;
+  url: string;
+  name?: string;
+};
+
+export type MediaItem = {
+  $id: string;
+  title: string;
+  description?: string;
+  mediaType: 'image_album' | 'video';
+  coverImageUrl?: string;
+  externalUrl?: string;
+  videoUrl?: string;
+  sampleImages?: MediaSampleImage[];
+  isPublished?: boolean;
+};
+
+export type MediaListResponse = {
+  documents: MediaItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type MediaConferencesResponse = {
+  documents: Conference[];
+  total: number;
 };
 
 export type Program = {
