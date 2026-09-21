@@ -33,6 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: 'ug.nrep.rec',
     versionCode,
     // Recommendations site is HTTP-only (no valid HTTPS cert yet).
+    // @ts-expect-error Expo Android config types omit usesCleartextTraffic; prebuild applies it.
     usesCleartextTraffic: true,
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',
