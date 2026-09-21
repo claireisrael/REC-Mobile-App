@@ -75,16 +75,14 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK packages
-        run: |
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager \
-            "platform-tools" \
-            "platforms;android-${{ env.ANDROID_COMPILE_SDK }}" \
-            "build-tools;${{ env.ANDROID_BUILD_TOOLS }}" \
-            "ndk;${{ env.ANDROID_NDK_VERSION }}"
+        uses: android-actions/setup-android@v4
+        with:
+          # Do not request deprecated "tools" (removed by Google; breaks setup-android@v3).
+          packages: |
+            platform-tools
+            platforms;android-${{ env.ANDROID_COMPILE_SDK }}
+            build-tools;${{ env.ANDROID_BUILD_TOOLS }}
+            ndk;${{ env.ANDROID_NDK_VERSION }}
 
       - name: Install dependencies
         run: npm ci
