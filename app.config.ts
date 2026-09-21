@@ -1,7 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-const version = process.env.APP_VERSION ?? '1.0.0';
-const versionCode = Number(process.env.ANDROID_VERSION_CODE ?? '1');
+const version = process.env.APP_VERSION ?? '1.1.0';
+const versionCode = Number(process.env.ANDROID_VERSION_CODE ?? '2');
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -16,10 +16,24 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: 'ug.nrep.rec',
     buildNumber: String(versionCode),
+    // Recommendations site is HTTP-only (no valid HTTPS cert yet).
+    infoPlist: {
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true,
+        NSExceptionDomains: {
+          'rec.recommendations.nrep.ug': {
+            NSExceptionAllowsInsecureHTTPLoads: true,
+            NSIncludesSubdomains: true,
+          },
+        },
+      },
+    },
   },
   android: {
     package: 'ug.nrep.rec',
     versionCode,
+    // Recommendations site is HTTP-only (no valid HTTPS cert yet).
+    usesCleartextTraffic: true,
     adaptiveIcon: {
       backgroundColor: '#FFFFFF',
       foregroundImage: './assets/images/android-icon-foreground.png',
@@ -34,6 +48,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
+    'expo-font',
+    'expo-status-bar',
+    'expo-web-browser',
     [
       'expo-splash-screen',
       {

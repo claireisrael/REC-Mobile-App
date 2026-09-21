@@ -34,7 +34,7 @@ type RecChatbotModalProps = {
   streaming: string;
   isStreaming: boolean;
   onClose: () => void;
-  onSend: (text: string) => void;
+  onSend: (text: string) => void | Promise<void>;
   onClear: () => void;
 };
 

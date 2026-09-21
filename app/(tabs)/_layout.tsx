@@ -5,7 +5,7 @@ import { RecTabBar } from '@/components/navigation/RecTabBar';
 export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => <RecTabBar {...props} />}
+      tabBar={(props) => <RecTabBar {...(props as any)} />}
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
@@ -19,6 +19,7 @@ export default function TabLayout() {
       <Tabs.Screen name="register" options={{ title: 'Registration' }} />
       <Tabs.Screen name="about" options={{ href: null, title: 'About' }} />
       <Tabs.Screen name="venue" options={{ href: null, title: 'Venue' }} />
+      <Tabs.Screen name="reports" options={{ href: null, title: 'Reports' }} />
       <Tabs.Screen name="session/[id]" options={{ href: null, title: 'Session' }} />
     </Tabs>
   );

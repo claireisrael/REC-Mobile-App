@@ -9,36 +9,41 @@ export type ChatMessage = {
 export const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: `Hello! I am the REC Assistant — your guide to Uganda's Annual Renewable Energy Conference (REC).
+  content: `Hello! I am the REC Assistant — your guide to the Renewable Energy Conference & Expo.
 
-I can answer questions about all REC editions from REC22 (2022) to REC26 (2026):
+I can help with:
 
-→ Conference themes, dates and venues
-→ Sessions and topics discussed per edition
-→ Sponsors, partners and exhibitors
-→ Registration and exhibition information
-→ Upcoming REC26 (2026) details
+→ Dates, venue, halls, and logistics
+→ Programme sessions and themes
+→ Sponsors, partners, and practical preparation
+→ Published media and reports from previous editions
+→ Registration status and conference contacts
 
-What would you like to know?`,
+Ask a question to get started.`,
   sources: [],
   showFollowUps: true,
 };
 
 export const QUICK_STARTS = [
-  'When did REC start?',
-  'What was the theme of REC24?',
-  'Where was REC25 held?',
-  'When is REC26?',
-  'Who organises REC?',
-  'How do I register for REC26?',
+  'How should I prepare for the conference across the 4 days?',
+  'Which sessions are relevant to finance and investment?',
+  'What happens on Day 3?',
+  'Show me the official photos from REC24',
+  'Can I download the REC25 conference report?',
 ];
 
 const REPORT_LINKS = {
   REC21: { label: 'REC21 Discussion Report', url: 'https://nrep.ug/resources/reports-documents/' },
   REC22: { label: 'REC22 EXPO Report 2022', url: 'https://nrep.ug/resources/reports-documents/' },
   REC23: { label: 'REC23 EXPO Report 2023', url: 'https://nrep.ug/resources/reports-documents/' },
-  REC24: { label: 'REC24 EXPO Report 2024', url: 'https://nrep.ug/wp-content/uploads/2025/01/REC24-EXPO-Report-1.pdf' },
-  REC25: { label: 'REC25 EXPO Report 2025', url: 'https://nrep.ug/wp-content/uploads/2026/03/REC25-EXPO-Report.pdf' },
+  REC24: {
+    label: 'REC24 EXPO Report 2024',
+    url: 'https://nrep.ug/wp-content/uploads/2025/01/REC24-EXPO-Report-1.pdf',
+  },
+  REC25: {
+    label: 'REC25 EXPO Report 2025',
+    url: 'https://nrep.ug/wp-content/uploads/2026/03/REC25-EXPO-Report.pdf',
+  },
   REC26: { label: 'REC26 Info', url: 'https://nrep.ug/rec/' },
 };
 
@@ -55,23 +60,21 @@ export function getReportLink(content: string, edition?: string) {
 
 export function getFollowUps(content: string) {
   const c = content.toLowerCase();
-  if (c.includes('rec22') || c.includes('2022'))
-    return ['What was the venue for REC22?', 'What topics were at REC22?', 'When did REC23 happen?'];
-  if (c.includes('rec23') || c.includes('2023'))
-    return ['What topics were discussed at REC23?', 'Where was REC23 held?', 'What happened at REC24?'];
-  if (c.includes('rec24') || c.includes('2024'))
-    return ['What was the theme of REC24?', 'Where was REC24 held?', 'Tell me about REC25'];
-  if (c.includes('rec25') || c.includes('2025'))
-    return ['Where was REC25 held?', 'What were REC25 outcomes?', 'When is REC26?'];
-  if (c.includes('rec26') || c.includes('2026'))
-    return ['What is the theme of REC26?', 'Who are the sponsors of REC26?', 'How do I register for REC26?'];
-  if (c.includes('theme'))
-    return ['What was the theme of REC25?', 'What was the theme of REC24?', 'What is REC26 theme?'];
-  if (c.includes('venue') || c.includes('held') || c.includes('kampala'))
-    return ['Which editions were at Speke Resort?', 'Where is REC26 being held?', 'When did they move to Serena Hotel?'];
+  if (c.includes('day 3') || c.includes('day3'))
+    return ['What happens on Day 1?', 'What happens on Day 2?', 'Where is the venue?'];
+  if (c.includes('report') || c.includes('media') || c.includes('photo'))
+    return ['Can I download the REC25 conference report?', 'Show me REC24 media', 'When is REC26?'];
+  if (c.includes('session') || c.includes('programme') || c.includes('program'))
+    return ['Which sessions are about investment?', 'What happens on Day 2?', 'Where are the halls?'];
+  if (c.includes('venue') || c.includes('serena') || c.includes('kampala'))
+    return ['How do I get to the venue?', 'What is the conference theme?', 'When does registration open?'];
   if (c.includes('sponsor') || c.includes('partner'))
-    return ['Who sponsors REC26?', 'Is GIZ involved in REC?', 'What role does NREP play?'];
-  return ['When is REC26?', 'Who organises REC?', 'What was the theme of REC25?'];
+    return ['Who organises REC?', 'How do I become a sponsor?', 'What is NREP?'];
+  return [
+    'When is the conference?',
+    'How should I prepare for the 4 days?',
+    'Can I download the REC25 conference report?',
+  ];
 }
 
 export function createMessageId() {

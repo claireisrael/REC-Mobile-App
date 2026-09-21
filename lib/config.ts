@@ -3,6 +3,7 @@ const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 /** Baked into release APK when CI secrets are missing — matches rec-mobile/.env */
 const productionDefaults = {
   apiBaseUrl: 'https://rec.nrep.ug',
+  chatApiUrl: 'https://chat.nrep.ug',
   appwrite: {
     endpoint: 'https://appwrite.nrep.ug/v1',
     projectId: '66bcc8450005201fa1af',
@@ -22,8 +23,15 @@ export const config = {
   apiBaseUrl: trimTrailingSlash(
     pick(process.env.EXPO_PUBLIC_API_BASE_URL, productionDefaults.apiBaseUrl)
   ),
-  recbrainSocketUrl: trimTrailingSlash(
-    pick(process.env.EXPO_PUBLIC_RECBRAIN_SOCKET_URL, '')
+  chatApiUrl: trimTrailingSlash(
+    pick(process.env.EXPO_PUBLIC_CHAT_API_URL, productionDefaults.chatApiUrl)
+  ),
+  // Open Guest Dashboard directly — the landing curtain often fails on phones.
+  recommendationsUrl: trimTrailingSlash(
+    pick(
+      process.env.EXPO_PUBLIC_RECOMMENDATIONS_URL,
+      'http://rec.recommendations.nrep.ug/guest'
+    )
   ),
   appwrite: {
     endpoint: pick(
@@ -75,4 +83,7 @@ export const isAppwriteConfigured = () =>
       config.appwrite.sponsorsCollectionId
   );
 
-export const isRecbrainConfigured = () => Boolean(config.recbrainSocketUrl);
+export const isRecChatConfigured = () => Boolean(config.chatApiUrl);
+
+/** @deprecated Use isRecChatConfigured */
+export const isRecbrainConfigured = isRecChatConfigured;

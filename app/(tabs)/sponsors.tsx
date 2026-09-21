@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { MediaCard } from '@/components/gallery/MediaCard';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -10,6 +11,7 @@ import { SelectField } from '@/components/ui/SelectField';
 import { colors } from '@/constants/theme';
 import { apiService } from '@/lib/api-service';
 import { fetchConferenceMedia, fetchMediaConferences } from '@/lib/public-media-api';
+import { routes } from '@/lib/routes';
 import type { Conference, MediaItem } from '@/lib/types';
 
 const FILTERS = [
@@ -21,6 +23,7 @@ const FILTERS = [
 type MediaFilter = (typeof FILTERS)[number]['value'];
 
 export default function MediaScreen() {
+  const router = useRouter();
   const [mediaConferences, setMediaConferences] = useState<Conference[]>([]);
   const [selectedConferenceId, setSelectedConferenceId] = useState('');
   const [conference, setConference] = useState<Conference | null>(null);
@@ -153,6 +156,14 @@ export default function MediaScreen() {
             <Text style={styles.conferenceCount}>
               {mediaCount} published media item{mediaCount === 1 ? '' : 's'}
             </Text>
+            <Pressable
+              style={styles.reportsLink}
+              onPress={() => router.navigate(routes.reports)}
+            >
+              <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+              <Text style={styles.reportsLinkText}>Browse conference reports</Text>
+              <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+            </Pressable>
           </View>
 
           {conferenceOptions.length > 1 ? (
@@ -298,6 +309,17 @@ const styles = StyleSheet.create({
   conferenceCount: {
     fontSize: 13,
     color: colors.textMuted,
+  },
+  reportsLink: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  reportsLinkText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.primary,
   },
   filtersCard: {
     marginHorizontal: 16,

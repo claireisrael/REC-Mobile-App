@@ -26,6 +26,7 @@ export type Conference = {
   year?: number;
   days?: string;
   mediaCount?: number;
+  reportCount?: number;
 };
 
 export type MediaSampleImage = {
@@ -57,6 +58,36 @@ export type MediaListResponse = {
 export type MediaConferencesResponse = {
   documents: Conference[];
   total: number;
+};
+
+export type ConferenceReport = {
+  $id: string;
+  title: string;
+  summary?: string;
+  reportType?: string;
+  reportUrl: string;
+  coverImageUrl?: string;
+  publicationDate?: string;
+  isPublished?: boolean;
+};
+
+export type ReportsListResponse = {
+  documents: ConferenceReport[];
+  total: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+};
+
+export type ReportConferencesResponse = {
+  documents: Conference[];
+  total: number;
+  siteConference?: Conference | null;
+};
+
+export type FeaturedPreviousReportResponse = {
+  report: ConferenceReport | null;
+  conference: Conference | null;
 };
 
 export type Program = {

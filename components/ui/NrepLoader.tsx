@@ -62,7 +62,7 @@ export function NrepLoader({ fullScreen = false, size = 120 }: NrepLoaderProps) 
 
 const styles = StyleSheet.create({
   fullScreen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',

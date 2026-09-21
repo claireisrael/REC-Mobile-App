@@ -31,6 +31,14 @@ const STEPS = [
 
 const registrationTypes = ['Attendee', 'Exhibitor'] as const;
 
+const SECTOR_OPTIONS = [
+  'Public',
+  'Private',
+  'Civil Society Organization',
+  'Academia',
+  'Other',
+] as const;
+
 type RegistrationFormProps = {
   conference: Conference;
   conferenceDays?: { label: string; theme?: string }[];
@@ -57,6 +65,7 @@ export function RegistrationForm({ conference, conferenceDays }: RegistrationFor
   const [otherName, setOtherName] = useState('');
   const [phone, setPhone] = useState('');
   const [organization, setOrganization] = useState('');
+  const [sector, setSector] = useState('');
   const [city, setCity] = useState('');
   const [stateRegion, setStateRegion] = useState('');
   const [country, setCountry] = useState('');
@@ -105,6 +114,7 @@ export function RegistrationForm({ conference, conferenceDays }: RegistrationFor
     if (!firstName.trim()) errors.firstName = 'First name is required';
     if (!lastName.trim()) errors.lastName = 'Last name is required';
     if (!organization.trim()) errors.organization = 'Organization is required';
+    if (!sector) errors.sector = "Select your organization's sector";
     if (!phone.trim()) errors.phone = 'Phone is required';
     if (!city.trim()) errors.city = 'City is required';
     if (!stateRegion.trim()) errors.stateRegion = 'State/region is required';
@@ -166,6 +176,10 @@ export function RegistrationForm({ conference, conferenceDays }: RegistrationFor
         setLastName(String(registrant.lastName || ''));
         setOrganization(String(registrant.organization || ''));
         setPhone(String(registrant.phone || ''));
+        const registrantSector = Array.isArray((registrant as { sector?: string[] }).sector)
+          ? (registrant as { sector?: string[] }).sector?.[0]
+          : '';
+        if (registrantSector) setSector(String(registrantSector));
         if (registrant.registrationType === 'Exhibitor') setRegistrationType('Exhibitor');
       }
       setStep(4);
@@ -212,7 +226,7 @@ export function RegistrationForm({ conference, conferenceDays }: RegistrationFor
         phone: phone.trim(),
         organization: organization.trim(),
         conferenceYears: [currentYear],
-        sector: [],
+        sector: sector ? [sector] : [],
         daysAttending,
         country,
         city: city.trim(),
@@ -321,6 +335,15 @@ export function RegistrationForm({ conference, conferenceDays }: RegistrationFor
             <FormField label="Last name" value={lastName} onChangeText={setLastName} required error={fieldErrors.lastName} />
             <FormField label="Other name" value={otherName} onChangeText={setOtherName} />
             <FormField label="Organization" value={organization} onChangeText={setOrganization} required error={fieldErrors.organization} />
+            <SelectField
+              label="Organization sector"
+              value={sector}
+              options={SECTOR_OPTIONS.map((option) => ({ label: option, value: option }))}
+              onChange={setSector}
+              placeholder="Select organization sector"
+              required
+              error={fieldErrors.sector}
+            />
             <FormField label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" required error={fieldErrors.phone} />
 
             <Text style={styles.sectionHeading}>Location</Text>

@@ -5,14 +5,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecChatbotFab } from '@/components/chatbot/RecChatbotFab';
 import { RecChatbotModal } from '@/components/chatbot/RecChatbotModal';
 import { useRecChatbot } from '@/hooks/useRecChatbot';
-import { isRecbrainConfigured } from '@/lib/config';
+import { isRecChatConfigured } from '@/lib/config';
 
 const TAB_BAR_OFFSET = 72;
 
 export function RecChatbotHost() {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
-  const enabled = isRecbrainConfigured();
+  const enabled = isRecChatConfigured();
   const chat = useRecChatbot(enabled);
 
   if (!enabled) return null;
@@ -43,7 +43,7 @@ export function RecChatbotHost() {
 
 const styles = StyleSheet.create({
   host: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 50,
   },
   fabPosition: {

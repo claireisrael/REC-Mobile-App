@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 
 const keys = [
   'EXPO_PUBLIC_API_BASE_URL',
+  'EXPO_PUBLIC_CHAT_API_URL',
   'EXPO_PUBLIC_APPWRITE_ENDPOINT',
   'EXPO_PUBLIC_APPWRITE_PROJECT_ID',
   'EXPO_PUBLIC_APPWRITE_DATABASE_ID',
@@ -29,6 +30,7 @@ const githubSecretAliases = {
 
 const defaults = {
   EXPO_PUBLIC_API_BASE_URL: 'https://rec.nrep.ug',
+  EXPO_PUBLIC_CHAT_API_URL: 'https://chat.nrep.ug',
   EXPO_PUBLIC_APPWRITE_PROGRAM_TIME_BLOCKS_COLLECTION_ID: 'rec_program_time_blocks',
   EXPO_PUBLIC_APPWRITE_SPONSOR_CATEGORIES_COLLECTION_ID: 'rec_sponsor_categories',
   EXPO_PUBLIC_APPWRITE_SPONSORS_COLLECTION_ID: 'rec_sponsors',

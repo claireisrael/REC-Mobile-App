@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import { HomeCtaSection } from '@/components/home/HomeCtaSection';
 import { HomeStatsBar } from '@/components/home/HomeStatsBar';
 import { ViewVenueBadge } from '@/components/home/ViewVenueBadge';
 import { MediaShowcase } from '@/components/home/MediaShowcase';
+import { RecActionsBadge } from '@/components/home/RecActionsBadge';
 import { SponsorShowcase } from '@/components/home/SponsorShowcase';
 import { ThemeSection } from '@/components/home/ThemeSection';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -181,6 +182,7 @@ export default function HomeScreen() {
       />
       <MediaShowcase conference={conference} items={featuredMedia} />
       <ViewVenueBadge conference={conference} />
+      <RecActionsBadge />
       <HomeCtaSection conference={conference} />
 
       <View style={styles.bottomSpacer} />

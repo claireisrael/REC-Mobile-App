@@ -1,150 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useCallback, useRef, useState } from 'react';
 
-import { config } from '@/lib/config';
+import { askRecChat } from '@/lib/rec-chat-api';
 import {
   createMessageId,
   type ChatMessage,
   WELCOME_MESSAGE,
 } from '@/lib/recbrain-content';
-import { getChatSessionId, resetChatSessionId } from '@/lib/recbrain-session';
-
-type HistoryDocument = {
-  $id?: string;
-  role: 'user' | 'assistant';
-  content: string;
-};
 
 export function useRecChatbot(enabled: boolean) {
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [thinking, setThinking] = useState(false);
   const [streaming, setStreaming] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [connected, setConnected] = useState(false);
-  const sessionIdRef = useRef('');
-  const sourcesRef = useRef<string[]>([]);
-  const socketRef = useRef<Socket | null>(null);
-
-  const loadHistory = useCallback(async () => {
-    const socket = socketRef.current;
-    if (!socket || !sessionIdRef.current) return;
-    socket.emit('chat:history', { sessionId: sessionIdRef.current });
-  }, []);
-
-  useEffect(() => {
-    if (!enabled || !config.recbrainSocketUrl) return undefined;
-
-    let active = true;
-
-    const connect = async () => {
-      sessionIdRef.current = await getChatSessionId();
-      const socket = io(config.recbrainSocketUrl, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-      });
-      socketRef.current = socket;
-
-      socket.on('connect', () => {
-        if (!active) return;
-        setConnected(true);
-        socket.emit('chat:history', { sessionId: sessionIdRef.current });
-      });
-
-      socket.on('disconnect', () => {
-        if (!active) return;
-        setConnected(false);
-      });
-
-      socket.on('chat:history:response', ({ history }: { history?: HistoryDocument[] }) => {
-        if (!active || !history?.length) return;
-        const loaded = history.map((entry) => ({
-          id: entry.$id || createMessageId(),
-          role: entry.role,
-          content: entry.content,
-          sources: [],
-          showFollowUps: entry.role === 'assistant',
-        }));
-        setMessages([WELCOME_MESSAGE, ...loaded]);
-      });
-
-      socket.on('chat:response', (data: { type: string; token?: string; sources?: string[]; message?: string }) => {
-        if (!active) return;
-
-        if (data.type === 'thinking') {
-          setThinking(true);
-          setStreaming('');
-          sourcesRef.current = [];
-          return;
-        }
-
-        if (data.type === 'token' && data.token) {
-          setThinking(false);
-          setIsStreaming(true);
-          setStreaming((prev) => prev + data.token);
-          return;
-        }
-
-        if (data.type === 'sources' && data.sources) {
-          sourcesRef.current = data.sources;
-          return;
-        }
-
-        if (data.type === 'done') {
-          setThinking(false);
-          setIsStreaming(false);
-          setStreaming((prev) => {
-            if (prev) {
-              const finalSources = [...sourcesRef.current];
-              setMessages((current) => [
-                ...current,
-                {
-                  id: createMessageId(),
-                  role: 'assistant',
-                  content: prev,
-                  sources: finalSources,
-                  showFollowUps: true,
-                },
-              ]);
-            }
-            return '';
-          });
-          sourcesRef.current = [];
-          return;
-        }
-
-        if (data.type === 'error') {
-          setThinking(false);
-          setIsStreaming(false);
-          setStreaming('');
-          setMessages((current) => [
-            ...current,
-            {
-              id: createMessageId(),
-              role: 'assistant',
-              content: data.message || 'Something went wrong. Please try again.',
-              sources: [],
-              showFollowUps: false,
-            },
-          ]);
-        }
-      });
-    };
-
-    void connect();
-
-    return () => {
-      active = false;
-      socketRef.current?.removeAllListeners();
-      socketRef.current?.disconnect();
-      socketRef.current = null;
-    };
-  }, [enabled]);
+  const [connected] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
+  const busyRef = useRef(false);
 
   const sendMessage = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const question = text.trim();
-      const socket = socketRef.current;
-      if (!question || !socket || thinking || isStreaming) return;
+      if (!enabled || !question || busyRef.current || thinking || isStreaming) return;
+
+      busyRef.current = true;
+      const history = messages
+        .filter((message) => message.id !== 'welcome')
+        .map((message) => ({ role: message.role, content: message.content }));
 
       setMessages((current) => [
         ...current,
@@ -157,16 +37,54 @@ export function useRecChatbot(enabled: boolean) {
         },
       ]);
 
-      socket.emit('chat:message', {
-        question,
-        sessionId: sessionIdRef.current,
-      });
+      setThinking(true);
+      setStreaming('');
+      setIsStreaming(false);
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        const result = await askRecChat(question, history, controller.signal);
+        setMessages((current) => [
+          ...current,
+          {
+            id: createMessageId(),
+            role: 'assistant',
+            content: result.answer,
+            sources: result.sources,
+            showFollowUps: true,
+          },
+        ]);
+      } catch (error) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: createMessageId(),
+            role: 'assistant',
+            content:
+              error instanceof Error
+                ? error.message
+                : 'Something went wrong. Please try again.',
+            sources: [],
+            showFollowUps: false,
+          },
+        ]);
+      } finally {
+        busyRef.current = false;
+        abortRef.current = null;
+        setThinking(false);
+        setIsStreaming(false);
+        setStreaming('');
+      }
     },
-    [isStreaming, thinking]
+    [enabled, isStreaming, messages, thinking]
   );
 
-  const clearChat = useCallback(async () => {
-    sessionIdRef.current = await resetChatSessionId();
+  const clearChat = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    busyRef.current = false;
     setMessages([WELCOME_MESSAGE]);
     setStreaming('');
     setThinking(false);
@@ -181,6 +99,6 @@ export function useRecChatbot(enabled: boolean) {
     connected,
     sendMessage,
     clearChat,
-    reloadHistory: loadHistory,
+    reloadHistory: async () => undefined,
   };
 }

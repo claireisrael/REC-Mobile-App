@@ -34,6 +34,7 @@ export default function RootLayout() {
         <View style={styles.root}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="rec-actions" options={{ presentation: 'card' }} />
           </Stack>
           <RecChatbotHost />
         </View>
