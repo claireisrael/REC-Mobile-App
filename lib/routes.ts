@@ -4,8 +4,10 @@ export const routes = {
   home: '/(tabs)' as Href,
   program: '/(tabs)/program' as Href,
   sponsors: '/(tabs)/sponsors' as Href,
+  profile: '/(tabs)/profile' as Href,
   reports: '/(tabs)/reports' as Href,
   venue: '/(tabs)/venue' as Href,
+  exploreUganda: '/(tabs)/explore-uganda' as Href,
   register: '/(tabs)/register' as Href,
   about: '/(tabs)/about' as Href,
   session: (id: string) => `/(tabs)/session/${id}` as Href,
@@ -19,6 +21,8 @@ export function tabHref(routeName: string): Href {
       return routes.program;
     case 'sponsors':
       return routes.sponsors;
+    case 'profile':
+      return routes.profile;
     case 'register':
       return routes.register;
     default:

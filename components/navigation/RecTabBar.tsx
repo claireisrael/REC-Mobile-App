@@ -38,9 +38,10 @@ const TAB_CONFIG: TabConfig[] = [
   { routeName: 'index', label: 'Home', icon: 'home-outline', iconFocused: 'home' },
   { routeName: 'program', label: 'Program', icon: 'calendar-outline', iconFocused: 'calendar' },
   { routeName: 'sponsors', label: 'Media', icon: 'images-outline', iconFocused: 'images' },
+  { routeName: 'profile', label: 'Card', icon: 'qr-code-outline', iconFocused: 'qr-code' },
   {
     routeName: 'register',
-    label: 'Registration',
+    label: 'Register',
     icon: 'ticket-outline',
     iconFocused: 'ticket',
     accent: true,

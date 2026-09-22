@@ -4,6 +4,7 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ScreenHeader } from '@/components/layout/ScreenHeader';
 import { GettingThereSection } from '@/components/venue/GettingThereSection';
+import { ExploreUgandaCta } from '@/components/venue/ExploreUgandaCta';
 import { VenueDetailsCard } from '@/components/venue/VenueDetailsCard';
 import { VenueMapCard } from '@/components/venue/VenueMapCard';
 import { VisaSection } from '@/components/venue/VisaSection';
@@ -55,6 +56,7 @@ export default function VenueScreen() {
         />
         <VenueDetailsCard conference={conference} />
         <VenueMapCard conference={conference} />
+        <ExploreUgandaCta />
         <GettingThereSection venue={conference.venue} />
         <VisaSection registrationOpen={conference.registrationOpen} />
         <View style={styles.bottomSpacer} />

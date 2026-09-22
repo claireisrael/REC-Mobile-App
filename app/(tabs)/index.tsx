@@ -23,6 +23,7 @@ import { MediaShowcase } from '@/components/home/MediaShowcase';
 import { RecActionsBadge } from '@/components/home/RecActionsBadge';
 import { SponsorShowcase } from '@/components/home/SponsorShowcase';
 import { ThemeSection } from '@/components/home/ThemeSection';
+import { ExploreUgandaCta } from '@/components/venue/ExploreUgandaCta';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { colors } from '@/constants/theme';
@@ -182,6 +183,7 @@ export default function HomeScreen() {
       />
       <MediaShowcase conference={conference} items={featuredMedia} />
       <ViewVenueBadge conference={conference} />
+      <ExploreUgandaCta placement="home" />
       <RecActionsBadge />
       <HomeCtaSection conference={conference} />
 
