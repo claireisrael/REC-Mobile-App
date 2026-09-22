@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   Keyboard,
   Linking,
@@ -106,14 +107,20 @@ export function RecChatbotModal({
   const [input, setInput] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
+  const scrollToEnd = (animated = true) => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated });
+    });
+  };
+
   useEffect(() => {
     if (!visible) return;
-    const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    const timer = setTimeout(() => scrollToEnd(true), 80);
     return () => clearTimeout(timer);
   }, [messages, streaming, thinking, visible]);
 
-  // KeyboardAvoidingView is unreliable inside Modal (esp. Android / page sheets).
-  // Lift the composer with the keyboard height instead.
+  // Pin the composer with absolute bottom = keyboard height.
+  // KeyboardAvoidingView / marginBottom are unreliable inside Android Modals.
   useEffect(() => {
     if (!visible) {
       setKeyboardHeight(0);
@@ -124,8 +131,19 @@ export function RecChatbotModal({
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const onShow = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+      const { height, screenY } = event.endCoordinates;
+      let next = Math.max(0, Math.round(height ?? 0));
+
+      // Android Modals may or may not resize with the keyboard. Use the
+      // visible overlap so we never double-lift (which hides the input).
+      if (Platform.OS === 'android' && typeof screenY === 'number') {
+        const windowH = Dimensions.get('window').height;
+        const overlap = Math.max(0, Math.round(windowH - screenY));
+        next = overlap > 0 ? overlap : next;
+      }
+
+      setKeyboardHeight(next);
+      setTimeout(() => scrollToEnd(true), 50);
     });
     const onHide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
 
@@ -136,13 +154,11 @@ export function RecChatbotModal({
   }, [visible]);
 
   const busy = thinking || isStreaming;
-  const showQuickStarts = messages.length <= 1;
   const keyboardOpen = keyboardHeight > 0;
-  // On iOS the keyboard frame already clears the home indicator.
-  const composerBottomPad = keyboardOpen ? 10 : Math.max(insets.bottom, 12);
-  const keyboardLift = keyboardOpen
-    ? Math.max(0, keyboardHeight - (Platform.OS === 'ios' ? insets.bottom : 0))
-    : 0;
+  const showQuickStarts = messages.length <= 1 && !keyboardOpen;
+  const composerPad = keyboardOpen ? 10 : Math.max(insets.bottom, 12);
+  // Keep a spacer so messages never sit under the floating input bar.
+  const inputBarReserve = 68 + composerPad;
 
   const submit = () => {
     if (!input.trim() || busy) return;
@@ -156,6 +172,7 @@ export function RecChatbotModal({
       animationType="slide"
       presentationStyle="fullScreen"
       onRequestClose={onClose}
+      statusBarTranslucent={Platform.OS === 'android'}
     >
       <View style={styles.screen}>
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -193,7 +210,10 @@ export function RecChatbotModal({
         <ScrollView
           ref={scrollRef}
           style={styles.messages}
-          contentContainerStyle={styles.messagesContent}
+          contentContainerStyle={[
+            styles.messagesContent,
+            { paddingBottom: inputBarReserve + keyboardHeight + 12 },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
         >
@@ -224,7 +244,15 @@ export function RecChatbotModal({
           ) : null}
         </ScrollView>
 
-        <View style={[styles.inputBar, { paddingBottom: composerBottomPad, marginBottom: keyboardLift }]}>
+        <View
+          style={[
+            styles.inputBar,
+            {
+              bottom: keyboardHeight,
+              paddingBottom: composerPad,
+            },
+          ]}
+        >
           <TextInput
             value={input}
             onChangeText={setInput}
@@ -235,6 +263,8 @@ export function RecChatbotModal({
             editable={!busy}
             blurOnSubmit={false}
             onSubmitEditing={submit}
+            onFocus={() => setTimeout(() => scrollToEnd(true), 100)}
+            textAlignVertical="top"
           />
           <Pressable
             style={[styles.sendBtn, (!input.trim() || busy) && styles.sendBtnDisabled]}
@@ -450,6 +480,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   inputBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
@@ -458,6 +491,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: -2 },
   },
   input: {
     flex: 1,
