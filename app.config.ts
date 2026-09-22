@@ -53,6 +53,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-status-bar',
     'expo-web-browser',
     [
+      'expo-notifications',
+      {
+        icon: './assets/images/icon.png',
+        color: '#0B7186',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/images/splash-logo.png',

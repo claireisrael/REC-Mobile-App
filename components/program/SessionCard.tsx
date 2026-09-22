@@ -5,6 +5,7 @@ import RenderHTML from 'react-native-render-html';
 
 import { colors } from '@/constants/theme';
 import { getSessionSpanLabel } from '@/lib/schedule-utils';
+import { useSessionPrefs } from '@/context/SessionPrefsContext';
 import type { Session } from '@/lib/types';
 
 type SessionCardProps = {
@@ -19,6 +20,17 @@ export function SessionCard({ session, compact = false, continuation = false }: 
   const contentWidth = width - 80;
   const spanLabel = session.sessionSpanType ? getSessionSpanLabel(session.sessionSpanType) : '';
   const showReadMore = (session.preamble?.length || 0) > 200;
+  const { prefs, update } = useSessionPrefs();
+  const pref = prefs[session.$id] || {};
+
+  const toggle = async (key: 'attending' | 'bookmarked' | 'remind') => {
+    const next = !pref[key];
+    await update(
+      session.$id,
+      { [key]: next },
+      { title: session.title, startTime: session.startTime }
+    );
+  };
 
   return (
     <View style={[styles.card, compact && styles.cardCompact]}>
@@ -50,6 +62,51 @@ export function SessionCard({ session, compact = false, continuation = false }: 
             This session continues through this schedule block.
           </Text>
         ) : null}
+
+        <View style={styles.actionsRow}>
+          <Pressable
+            style={[styles.actionChip, pref.bookmarked && styles.actionChipActive]}
+            onPress={() => toggle('bookmarked')}
+            hitSlop={6}
+          >
+            <Ionicons
+              name={pref.bookmarked ? 'bookmark' : 'bookmark-outline'}
+              size={14}
+              color={pref.bookmarked ? colors.primaryDark : colors.primary}
+            />
+            <Text style={[styles.actionText, pref.bookmarked && styles.actionTextActive]}>
+              Save
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.actionChip, pref.attending && styles.actionChipAttend]}
+            onPress={() => toggle('attending')}
+            hitSlop={6}
+          >
+            <Ionicons
+              name={pref.attending ? 'checkmark-circle' : 'checkmark-circle-outline'}
+              size={14}
+              color={pref.attending ? colors.success : colors.primary}
+            />
+            <Text style={[styles.actionText, pref.attending && styles.actionTextAttend]}>
+              Attend
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.actionChip, pref.remind && styles.actionChipRemind]}
+            onPress={() => toggle('remind')}
+            hitSlop={6}
+          >
+            <Ionicons
+              name={pref.remind ? 'notifications' : 'notifications-outline'}
+              size={14}
+              color={pref.remind ? colors.accentDark : colors.primary}
+            />
+            <Text style={[styles.actionText, pref.remind && styles.actionTextRemind]}>
+              Remind
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {!compact ? (
@@ -187,6 +244,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: colors.textMuted,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  actionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: `${colors.primary}44`,
+    backgroundColor: `${colors.primary}0D`,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  actionChipActive: {
+    backgroundColor: `${colors.primary}22`,
+    borderColor: colors.primary,
+  },
+  actionChipAttend: {
+    backgroundColor: `${colors.success}18`,
+    borderColor: `${colors.success}66`,
+  },
+  actionChipRemind: {
+    backgroundColor: `${colors.accent}22`,
+    borderColor: `${colors.accent}99`,
+  },
+  actionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  actionTextActive: {
+    color: colors.primaryDark,
+  },
+  actionTextAttend: {
+    color: colors.success,
+  },
+  actionTextRemind: {
+    color: colors.accentDark,
   },
   organizerRow: {
     flexDirection: 'row',

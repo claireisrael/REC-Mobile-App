@@ -5,6 +5,7 @@ export const routes = {
   program: '/(tabs)/program' as Href,
   sponsors: '/(tabs)/sponsors' as Href,
   profile: '/(tabs)/profile' as Href,
+  connect: '/(tabs)/connect' as Href,
   reports: '/(tabs)/reports' as Href,
   venue: '/(tabs)/venue' as Href,
   exploreUganda: '/(tabs)/explore-uganda' as Href,
@@ -23,6 +24,8 @@ export function tabHref(routeName: string): Href {
       return routes.sponsors;
     case 'profile':
       return routes.profile;
+    case 'connect':
+      return routes.connect;
     case 'register':
       return routes.register;
     default:

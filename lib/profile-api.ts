@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { connectApi } from '@/lib/connect-api';
+
 const STORAGE_KEY = 'rec.networkingProfile.v1';
 
 export type NetworkingProfile = {
@@ -9,6 +11,7 @@ export type NetworkingProfile = {
   phone: string;
   address: string;
   organization?: string;
+  designation?: string;
   updatedAt?: string | null;
 };
 
@@ -29,12 +32,14 @@ function validateProfile(fields: {
   phone: string;
   address: string;
   organization?: string;
+  designation?: string;
 }): NetworkingProfile {
   const fullName = String(fields.fullName || '').trim();
   const email = normalizeEmail(fields.email);
   const phone = String(fields.phone || '').trim();
   const address = String(fields.address || '').trim();
   const organization = String(fields.organization || '').trim();
+  const designation = String(fields.designation || '').trim();
 
   if (!email || !email.includes('@')) {
     throw new Error('A valid email is required');
@@ -50,6 +55,7 @@ function validateProfile(fields: {
     phone,
     address,
     organization: organization || undefined,
+    designation: designation || undefined,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -83,6 +89,18 @@ export async function saveProfileSession(session: ProfileSession): Promise<void>
       profile: session.profile,
     })
   );
+
+  // Best-effort: publish name/org/designation into Connect directory (Appwrite).
+  try {
+    await connectApi.upsertPerson({
+      email: session.profile.email,
+      fullName: session.profile.fullName,
+      organization: session.profile.organization,
+      designation: session.profile.designation,
+    });
+  } catch {
+    // Local profile remains valid even if directory sync fails.
+  }
 }
 
 export async function clearProfileSession(): Promise<void> {
@@ -96,6 +114,7 @@ export function saveLocalProfile(fields: {
   phone: string;
   address: string;
   organization?: string;
+  designation?: string;
 }): ProfileSession {
   const profile = validateProfile(fields);
   return { email: profile.email, profile };
@@ -118,6 +137,7 @@ export function buildVCard(profile: {
   phone: string;
   address: string;
   organization?: string;
+  designation?: string;
 }) {
   const escape = (value: string) =>
     String(value || '')
@@ -131,6 +151,7 @@ export function buildVCard(profile: {
     'VERSION:3.0',
     `FN:${escape(profile.fullName)}`,
     profile.organization ? `ORG:${escape(profile.organization)}` : null,
+    profile.designation ? `TITLE:${escape(profile.designation)}` : null,
     `TEL;TYPE=CELL:${escape(profile.phone)}`,
     `EMAIL:${escape(profile.email)}`,
     `ADR;TYPE=HOME:;;${escape(profile.address)};;;;`,

@@ -14,6 +14,10 @@ const productionDefaults = {
     programTimeBlocksCollectionId: 'rec_program_time_blocks',
     sponsorCategoriesCollectionId: 'rec_sponsor_categories',
     sponsorsCollectionId: 'rec_sponsors',
+    connectPeopleCollectionId: 'rec_connect_people',
+    connectRequestsCollectionId: 'rec_connect_requests',
+    connectNotificationsCollectionId: 'rec_connect_notifications',
+    connectDevicesCollectionId: 'rec_connect_devices',
   },
 };
 
@@ -69,6 +73,22 @@ export const config = {
     sponsorsCollectionId: pick(
       process.env.EXPO_PUBLIC_APPWRITE_SPONSORS_COLLECTION_ID,
       productionDefaults.appwrite.sponsorsCollectionId
+    ),
+    connectPeopleCollectionId: pick(
+      process.env.EXPO_PUBLIC_APPWRITE_CONNECT_PEOPLE_COLLECTION_ID,
+      productionDefaults.appwrite.connectPeopleCollectionId
+    ),
+    connectRequestsCollectionId: pick(
+      process.env.EXPO_PUBLIC_APPWRITE_CONNECT_REQUESTS_COLLECTION_ID,
+      productionDefaults.appwrite.connectRequestsCollectionId
+    ),
+    connectNotificationsCollectionId: pick(
+      process.env.EXPO_PUBLIC_APPWRITE_CONNECT_NOTIFICATIONS_COLLECTION_ID,
+      productionDefaults.appwrite.connectNotificationsCollectionId
+    ),
+    connectDevicesCollectionId: pick(
+      process.env.EXPO_PUBLIC_APPWRITE_CONNECT_DEVICES_COLLECTION_ID,
+      productionDefaults.appwrite.connectDevicesCollectionId
     ),
   },
 };

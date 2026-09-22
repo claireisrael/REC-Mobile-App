@@ -58,6 +58,7 @@ export default function ProfileScreen() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [organization, setOrganization] = useState('');
+  const [designation, setDesignation] = useState('');
   const [profile, setProfile] = useState<NetworkingProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,7 @@ export default function ProfileScreen() {
     setPhone(next.phone || '');
     setAddress(next.address || '');
     setOrganization(next.organization || '');
+    setDesignation(next.designation || '');
   }, []);
 
   useEffect(() => {
@@ -101,6 +103,7 @@ export default function ProfileScreen() {
         phone: phone.trim(),
         address: address.trim(),
         organization: organization.trim(),
+        designation: designation.trim(),
       });
       await saveProfileSession(session);
       applyProfile(session.profile);
@@ -120,6 +123,7 @@ export default function ProfileScreen() {
     setPhone('');
     setAddress('');
     setOrganization('');
+    setDesignation('');
     setEditing(false);
     setError('');
   };
@@ -141,6 +145,7 @@ export default function ProfileScreen() {
         phone: profile.phone,
         address: profile.address,
         organization: profile.organization,
+        designation: profile.designation,
       })
     : '';
 
@@ -167,6 +172,9 @@ export default function ProfileScreen() {
                 <Text style={styles.heroName}>{profile.fullName}</Text>
                 {profile.organization ? (
                   <Text style={styles.heroOrg}>{profile.organization}</Text>
+                ) : null}
+                {profile.designation ? (
+                  <Text style={styles.heroOrg}>{profile.designation}</Text>
                 ) : null}
               </View>
             ) : (
@@ -202,6 +210,13 @@ export default function ProfileScreen() {
                     icon="business-outline"
                     label="Organization"
                     value={profile.organization}
+                  />
+                ) : null}
+                {profile.designation ? (
+                  <ContactRow
+                    icon="ribbon-outline"
+                    label="Designation"
+                    value={profile.designation}
                   />
                 ) : null}
               </View>
@@ -273,6 +288,12 @@ export default function ProfileScreen() {
               value={organization}
               onChangeText={setOrganization}
               placeholder="Optional"
+            />
+            <FormField
+              label="Designation"
+              value={designation}
+              onChangeText={setDesignation}
+              placeholder="e.g. Programme Officer"
             />
             <Pressable
               style={[styles.primaryBtn, busy && styles.btnDisabled]}

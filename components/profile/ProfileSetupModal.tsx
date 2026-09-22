@@ -29,6 +29,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [organization, setOrganization] = useState('');
+  const [designation, setDesignation] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,6 +43,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
         phone,
         address,
         organization,
+        designation,
       });
       await saveProfileSession(session);
       onComplete(session.profile);
@@ -116,6 +118,12 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
             value={organization}
             onChangeText={setOrganization}
             placeholder="Optional"
+          />
+          <FormField
+            label="Designation"
+            value={designation}
+            onChangeText={setDesignation}
+            placeholder="e.g. Programme Officer"
           />
 
           <Pressable

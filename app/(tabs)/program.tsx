@@ -10,6 +10,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { colors } from '@/constants/theme';
 import { useAppData } from '@/context/AppDataContext';
+import { SessionPrefsProvider } from '@/context/SessionPrefsContext';
 import { getConferenceInfo } from '@/lib/conference-info';
 import { fetchFeaturedPreviousReport } from '@/lib/public-reports-api';
 import type { Conference, ConferenceReport } from '@/lib/types';
@@ -75,41 +76,43 @@ export default function ProgramScreen() {
   const halls = program?.venueHalls || [];
 
   return (
-    <ScreenContainer>
-      <ScrollView
-        style={styles.screen}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <ProgramHero conference={conference} program={program} />
+    <SessionPrefsProvider>
+      <ScreenContainer>
+        <ScrollView
+          style={styles.screen}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          <ProgramHero conference={conference} program={program} />
 
-        <View style={styles.section}>
-          {error ? (
-            <View style={styles.warning}>
-              <Text style={styles.warningText}>{error}</Text>
-            </View>
-          ) : null}
+          <View style={styles.section}>
+            {error ? (
+              <View style={styles.warning}>
+                <Text style={styles.warningText}>{error}</Text>
+              </View>
+            ) : null}
 
-          <ProgramStats
-            daysCount={program.daysCount}
-            sessionCount={sessions.length}
-            hallsCount={halls.length}
-          />
+            <ProgramStats
+              daysCount={program.daysCount}
+              sessionCount={sessions.length}
+              hallsCount={halls.length}
+            />
 
-          <ProgramSchedule
+            <ProgramSchedule
+              conference={conference}
+              program={program}
+              sessions={sessions}
+              timeBlocks={timeBlocks}
+            />
+          </View>
+
+          <PreviousReportCta
             conference={conference}
-            program={program}
-            sessions={sessions}
-            timeBlocks={timeBlocks}
+            report={previousReport.report}
+            reportConference={previousReport.conference}
           />
-        </View>
-
-        <PreviousReportCta
-          conference={conference}
-          report={previousReport.report}
-          reportConference={previousReport.conference}
-        />
-      </ScrollView>
-    </ScreenContainer>
+        </ScrollView>
+      </ScreenContainer>
+    </SessionPrefsProvider>
   );
 }
 

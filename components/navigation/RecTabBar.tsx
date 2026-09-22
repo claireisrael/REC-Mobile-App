@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
-import { useAppData } from '@/context/AppDataContext';
 import { tabHref } from '@/lib/routes';
 
 type RecTabBarProps = {
@@ -32,8 +31,6 @@ type TabConfig = {
   icon: keyof typeof Ionicons.glyphMap;
   iconFocused: keyof typeof Ionicons.glyphMap;
   accent?: boolean;
-  /** Match web navbar: only show Register when conference.registrationOpen */
-  requiresRegistrationOpen?: boolean;
 };
 
 const TAB_CONFIG: TabConfig[] = [
@@ -42,20 +39,17 @@ const TAB_CONFIG: TabConfig[] = [
   { routeName: 'sponsors', label: 'Media', icon: 'images-outline', iconFocused: 'images' },
   { routeName: 'profile', label: 'Profile', icon: 'person-outline', iconFocused: 'person' },
   {
-    routeName: 'register',
-    label: 'Register',
-    icon: 'ticket-outline',
-    iconFocused: 'ticket',
+    routeName: 'connect',
+    label: 'Connect',
+    icon: 'people-outline',
+    iconFocused: 'people',
     accent: true,
-    requiresRegistrationOpen: true,
   },
 ];
 
 export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { conference } = useAppData();
-  const registrationOpen = conference?.registrationOpen === true;
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -63,7 +57,6 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
         {state.routes.map((route, index) => {
           const config = TAB_CONFIG.find((tab) => tab.routeName === route.name);
           if (!config) return null;
-          if (config.requiresRegistrationOpen && !registrationOpen) return null;
 
           const isFocused = state.index === index;
           const { options } = descriptors[route.key];
@@ -101,7 +94,7 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
                 onLongPress={onLongPress}
                 style={styles.tab}
               >
-                <View style={[styles.registerPill, isFocused && styles.registerPillFocused]}>
+                <View style={[styles.connectPill, isFocused && styles.connectPillFocused]}>
                   <Ionicons
                     name={iconName}
                     size={22}
@@ -181,7 +174,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
-  registerPill: {
+  connectPill: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -191,7 +184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  registerPillFocused: {
+  connectPillFocused: {
     backgroundColor: colors.accent,
     borderColor: colors.accentDark,
   },

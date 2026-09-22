@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DayTab } from '@/components/program/DayTab';
 import { HallSelect } from '@/components/program/HallSelect';
 import { TimeSlotAccordion } from '@/components/program/TimeSlotAccordion';
 import { colors } from '@/constants/theme';
+import { useSessionPrefs } from '@/context/SessionPrefsContext';
 import {
   getDayDate,
   getFilteredSessions,
@@ -30,7 +31,9 @@ export function ProgramSchedule({
 }: ProgramScheduleProps) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedHall, setSelectedHall] = useState('all');
+  const [agendaOnly, setAgendaOnly] = useState(false);
   const [expandedTimeSlots, setExpandedTimeSlots] = useState<Record<string, boolean>>({});
+  const { prefs } = useSessionPrefs();
 
   const days = useMemo(
     () => Array.from({ length: program?.daysCount || 0 }, (_, index) => index + 1),
@@ -38,18 +41,31 @@ export function ProgramSchedule({
   );
   const halls = program?.venueHalls || [];
 
+  const agendaSessions = useMemo(() => {
+    if (!agendaOnly) return sessions;
+    return sessions.filter((session) => {
+      const pref = prefs[session.$id];
+      return Boolean(pref?.attending || pref?.bookmarked);
+    });
+  }, [agendaOnly, sessions, prefs]);
+
   useEffect(() => {
     if (!selectedDay && days.length > 0) {
       setSelectedDay(days[0]);
     }
   }, [days, selectedDay]);
 
-  const daySessions = selectedDay ? getSessionsByDay(sessions, selectedDay) : [];
+  const daySessions = selectedDay ? getSessionsByDay(agendaSessions, selectedDay) : [];
   const filteredSessions = getFilteredSessions(daySessions, selectedHall);
   const usesTimeBlocks = hasProgramTimeBlocks(timeBlocks);
   const groupedSessions = usesTimeBlocks ? {} : groupSessionsByTimeSlot(filteredSessions);
   const scheduleRows = usesTimeBlocks
-    ? buildScheduleRows({ sessions, timeBlocks, day: selectedDay || 1, selectedHall })
+    ? buildScheduleRows({
+        sessions: agendaSessions,
+        timeBlocks,
+        day: selectedDay || 1,
+        selectedHall,
+      })
     : [];
 
   const toggleTimeSlot = (timeKey: string) => {
@@ -76,6 +92,20 @@ export function ProgramSchedule({
             <HallSelect halls={halls} selectedHall={selectedHall} onSelect={setSelectedHall} />
           ) : null}
         </View>
+
+        <Pressable
+          style={[styles.agendaChip, agendaOnly && styles.agendaChipActive]}
+          onPress={() => setAgendaOnly((v) => !v)}
+        >
+          <Ionicons
+            name={agendaOnly ? 'bookmark' : 'bookmark-outline'}
+            size={14}
+            color={agendaOnly ? colors.primaryDark : colors.primary}
+          />
+          <Text style={[styles.agendaChipText, agendaOnly && styles.agendaChipTextActive]}>
+            My agenda
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.dayTabsSection}>
@@ -85,7 +115,7 @@ export function ProgramSchedule({
               key={day}
               day={day}
               dayDate={getDayDate(conference?.startDate, day)}
-              sessionCount={getSessionsByDay(sessions, day).length}
+              sessionCount={getSessionsByDay(agendaSessions, day).length}
               isActive={selectedDay === day}
               onPress={() => setSelectedDay(day)}
             />
@@ -100,7 +130,8 @@ export function ProgramSchedule({
               <Ionicons name="calendar-outline" size={40} color="#9CA3AF" />
               <Text style={styles.emptyTitle}>No schedule blocks match this view</Text>
               <Text style={styles.emptyText}>
-                Try another day{selectedHall !== 'all' ? ' or choose all halls' : ''}.
+                Try another day{selectedHall !== 'all' ? ' or choose all halls' : ''}
+                {agendaOnly ? ', or add sessions to your agenda' : ''}.
               </Text>
             </View>
           ) : (
@@ -121,7 +152,8 @@ export function ProgramSchedule({
             <Ionicons name="calendar-outline" size={40} color="#9CA3AF" />
             <Text style={styles.emptyTitle}>No sessions match this view</Text>
             <Text style={styles.emptyText}>
-              Try another day{selectedHall !== 'all' ? ' or choose all halls' : ''}.
+              Try another day{selectedHall !== 'all' ? ' or choose all halls' : ''}
+              {agendaOnly ? ', or add sessions to your agenda' : ''}.
             </Text>
           </View>
         ) : (
@@ -160,6 +192,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     paddingHorizontal: 20,
     paddingVertical: 20,
+    gap: 14,
   },
   headerTop: {
     gap: 16,
@@ -178,6 +211,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.textMuted,
+  },
+  agendaChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: `${colors.primary}44`,
+    backgroundColor: `${colors.primary}0D`,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  agendaChipActive: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accentDark,
+  },
+  agendaChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  agendaChipTextActive: {
+    color: colors.primaryDark,
   },
   dayTabsSection: {
     borderBottomWidth: 1,
