@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  KeyboardAvoidingView,
+  Keyboard,
   Linking,
   Modal,
   Platform,
@@ -59,15 +59,11 @@ function MessageBubble({
   }
 
   return (
-    <View style={[styles.bubbleRow, isUser ? styles.bubbleRowUser : styles.bubbleRowAssistant]}>
-      {!isUser ? (
-        <Image source={CHATBOT_LOGO} style={styles.avatar} resizeMode="cover" />
-      ) : null}
+    <View style={[styles.bubbleRow, styles.bubbleRowAssistant]}>
+      <Image source={CHATBOT_LOGO} style={styles.avatar} resizeMode="cover" />
       <View style={styles.bubbleColumn}>
-        <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
-          <Text style={[styles.bubbleText, isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant]}>
-            {message.content}
-          </Text>
+        <View style={[styles.bubble, styles.bubbleAssistant]}>
+          <Text style={styles.bubbleTextAssistant}>{message.content}</Text>
           {message.sources.length > 0 ? (
             <Text style={styles.sourcesText}>Sources: {message.sources.join(' · ')}</Text>
           ) : null}
@@ -80,7 +76,7 @@ function MessageBubble({
           </Pressable>
         ) : null}
 
-        {!isUser && message.showFollowUps ? (
+        {message.showFollowUps ? (
           <View style={styles.followUpRow}>
             {getFollowUps(message.content).map((question) => (
               <Pressable key={question} style={styles.followUpChip} onPress={() => onFollowUp(question)}>
@@ -108,6 +104,7 @@ export function RecChatbotModal({
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [input, setInput] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (!visible) return;
@@ -115,20 +112,56 @@ export function RecChatbotModal({
     return () => clearTimeout(timer);
   }, [messages, streaming, thinking, visible]);
 
+  // KeyboardAvoidingView is unreliable inside Modal (esp. Android / page sheets).
+  // Lift the composer with the keyboard height instead.
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+      return;
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, [visible]);
+
   const busy = thinking || isStreaming;
   const showQuickStarts = messages.length <= 1;
+  const keyboardOpen = keyboardHeight > 0;
+  // On iOS the keyboard frame already clears the home indicator.
+  const composerBottomPad = keyboardOpen ? 10 : Math.max(insets.bottom, 12);
+  const keyboardLift = keyboardOpen
+    ? Math.max(0, keyboardHeight - (Platform.OS === 'ios' ? insets.bottom : 0))
+    : 0;
+
+  const submit = () => {
+    if (!input.trim() || busy) return;
+    onSend(input);
+    setInput('');
+  };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-      >
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.screen}>
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <View style={styles.headerLeft}>
             <Image source={CHATBOT_LOGO} style={styles.headerLogo} resizeMode="cover" />
-            <View>
+            <View style={styles.headerCopy}>
               <Text style={styles.headerTitle}>REC Assistant</Text>
               <Text style={styles.headerSubtitle}>Renewable Energy Conference · REC22 – REC26</Text>
             </View>
@@ -162,6 +195,7 @@ export function RecChatbotModal({
           style={styles.messages}
           contentContainerStyle={styles.messagesContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
         >
           {messages.map((message) => (
             <MessageBubble key={message.id} message={message} onFollowUp={onSend} />
@@ -190,7 +224,7 @@ export function RecChatbotModal({
           ) : null}
         </ScrollView>
 
-        <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={[styles.inputBar, { paddingBottom: composerBottomPad, marginBottom: keyboardLift }]}>
           <TextInput
             value={input}
             onChangeText={setInput}
@@ -199,24 +233,18 @@ export function RecChatbotModal({
             style={styles.input}
             multiline
             editable={!busy}
-            onSubmitEditing={() => {
-              if (!input.trim()) return;
-              onSend(input);
-              setInput('');
-            }}
+            blurOnSubmit={false}
+            onSubmitEditing={submit}
           />
           <Pressable
             style={[styles.sendBtn, (!input.trim() || busy) && styles.sendBtnDisabled]}
             disabled={!input.trim() || busy}
-            onPress={() => {
-              onSend(input);
-              setInput('');
-            }}
+            onPress={submit}
           >
             <Ionicons name="send" size={18} color={colors.white} />
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -240,6 +268,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
+  headerCopy: {
     flex: 1,
     minWidth: 0,
   },
@@ -315,6 +347,7 @@ const styles = StyleSheet.create({
   messagesContent: {
     padding: 16,
     gap: 14,
+    flexGrow: 1,
   },
   bubbleRow: {
     flexDirection: 'row',
