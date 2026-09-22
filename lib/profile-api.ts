@@ -1,10 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { config } from './config';
-
 const STORAGE_KEY = 'rec.networkingProfile.v1';
-
-type ApiError = { error?: string };
 
 export type NetworkingProfile = {
   id?: string | null;
@@ -13,134 +9,91 @@ export type NetworkingProfile = {
   phone: string;
   address: string;
   organization?: string;
-  cardToken?: string;
-  cardUrl?: string;
-  isPublic?: boolean;
-  registrantId?: string | null;
   updatedAt?: string | null;
 };
 
 export type ProfileSession = {
   email: string;
-  profileToken: string;
-  profile: NetworkingProfile | null;
+  profile: NetworkingProfile;
 };
 
-async function readApiError(response: Response, fallback: string) {
-  const text = await response.text();
-  try {
-    const data = JSON.parse(text) as ApiError;
-    if (data.error) return data.error;
-  } catch {
-    // HTML 404 pages return empty error object from failed JSON parse
-  }
-  if (response.status === 404) {
-    return 'Profile is not available on the server yet. Please try again after the next update.';
-  }
-  return fallback;
+function normalizeEmail(email: string) {
+  return String(email || '')
+    .trim()
+    .toLowerCase();
 }
 
-async function postJson<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(`${config.apiBaseUrl}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(await readApiError(response, 'Could not send verification code'));
-  }
-  return (await response.json()) as T;
-}
+function validateProfile(fields: {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  organization?: string;
+}): NetworkingProfile {
+  const fullName = String(fields.fullName || '').trim();
+  const email = normalizeEmail(fields.email);
+  const phone = String(fields.phone || '').trim();
+  const address = String(fields.address || '').trim();
+  const organization = String(fields.organization || '').trim();
 
-async function getJson<T>(path: string, profileToken?: string): Promise<T> {
-  const headers: Record<string, string> = {};
-  if (profileToken) headers['X-Profile-Token'] = profileToken;
-  const response = await fetch(`${config.apiBaseUrl}${path}`, {
-    cache: 'no-store',
-    headers,
-  });
-  if (!response.ok) {
-    throw new Error(await readApiError(response, 'Could not load profile'));
+  if (!email || !email.includes('@')) {
+    throw new Error('A valid email is required');
   }
-  return (await response.json()) as T;
-}
+  if (!fullName) throw new Error('Name is required');
+  if (!phone) throw new Error('Contact phone is required');
+  if (!address) throw new Error('Address is required');
 
-async function putJson<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const response = await fetch(`${config.apiBaseUrl}${path}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(body.profileToken ? { 'X-Profile-Token': String(body.profileToken) } : {}),
-    },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw new Error(await readApiError(response, 'Could not save profile'));
-  }
-  return (await response.json()) as T;
+  return {
+    id: email,
+    fullName,
+    email,
+    phone,
+    address,
+    organization: organization || undefined,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 export async function loadProfileSession(): Promise<ProfileSession | null> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as ProfileSession;
-    if (!parsed?.email || !parsed?.profileToken) return null;
-    return parsed;
+    const parsed = JSON.parse(raw) as ProfileSession & { profileToken?: string };
+    if (!parsed?.email || !parsed?.profile?.fullName) return null;
+    return {
+      email: parsed.email,
+      profile: parsed.profile,
+    };
   } catch {
     return null;
   }
 }
 
 export async function saveProfileSession(session: ProfileSession): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  await AsyncStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      email: session.email,
+      profile: session.profile,
+    })
+  );
 }
 
 export async function clearProfileSession(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY);
 }
 
-export const profileApi = {
-  start(email: string) {
-    return postJson<{ status: string; email: string; message: string }>('/api/profile/start', {
-      email,
-    });
-  },
-
-  verify(email: string, otp: string) {
-    return postJson<{
-      status: string;
-      email: string;
-      profileToken: string;
-      profile: NetworkingProfile;
-    }>('/api/profile/verify', { email, otp });
-  },
-
-  getMe(email: string, profileToken: string) {
-    const qs = new URLSearchParams({ email, profileToken });
-    return getJson<{ profile: NetworkingProfile | null; email: string }>(
-      `/api/profile/me?${qs.toString()}`,
-      profileToken
-    );
-  },
-
-  updateMe(
-    email: string,
-    profileToken: string,
-    fields: {
-      fullName: string;
-      phone: string;
-      address: string;
-      organization?: string;
-    }
-  ) {
-    return putJson<{ profile: NetworkingProfile; email: string }>('/api/profile/me', {
-      email,
-      profileToken,
-      ...fields,
-    });
-  },
-};
+/** Mobile-only: create/update profile on this device (no web API). */
+export function saveLocalProfile(fields: {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  organization?: string;
+}): ProfileSession {
+  const profile = validateProfile(fields);
+  return { email: profile.email, profile };
+}
 
 /** Mobile-only QR payload — contact card, no web page required. */
 export function buildVCard(profile: {

@@ -18,20 +18,17 @@ import { colors } from '@/constants/theme';
 import {
   clearProfileSession,
   loadProfileSession,
-  profileApi,
+  saveLocalProfile,
   saveProfileSession,
   buildVCard,
   type NetworkingProfile,
-  type ProfileSession,
 } from '@/lib/profile-api';
 
-type Step = 'email' | 'otp' | 'edit' | 'card';
+type Step = 'edit' | 'card';
 
 export default function ProfileScreen() {
-  const [step, setStep] = useState<Step>('email');
+  const [step, setStep] = useState<Step>('edit');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [profileToken, setProfileToken] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -41,18 +38,14 @@ export default function ProfileScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const applyProfile = useCallback((next: NetworkingProfile | null, sessionEmail: string) => {
+  const applyProfile = useCallback((next: NetworkingProfile) => {
     setProfile(next);
-    setEmail(sessionEmail);
-    setFullName(next?.fullName || '');
-    setPhone(next?.phone || '');
-    setAddress(next?.address || '');
-    setOrganization(next?.organization || '');
-    if (next?.fullName && next?.phone && next?.address) {
-      setStep('card');
-    } else {
-      setStep('edit');
-    }
+    setEmail(next.email);
+    setFullName(next.fullName || '');
+    setPhone(next.phone || '');
+    setAddress(next.address || '');
+    setOrganization(next.organization || '');
+    setStep('card');
   }, []);
 
   useEffect(() => {
@@ -60,28 +53,9 @@ export default function ProfileScreen() {
     (async () => {
       try {
         const session = await loadProfileSession();
-        if (!session || cancelled) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-        setProfileToken(session.profileToken);
-        try {
-          const me = await profileApi.getMe(session.email, session.profileToken);
-          if (cancelled) return;
-          applyProfile(me.profile, session.email);
-          await saveProfileSession({
-            email: session.email,
-            profileToken: session.profileToken,
-            profile: me.profile,
-          });
-        } catch {
-          if (cancelled) return;
-          if (session.profile?.fullName) {
-            applyProfile(session.profile, session.email);
-          } else {
-            await clearProfileSession();
-            setStep('email');
-          }
+        if (cancelled) return;
+        if (session?.profile?.fullName) {
+          applyProfile(session.profile);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -92,62 +66,19 @@ export default function ProfileScreen() {
     };
   }, [applyProfile]);
 
-  const persist = async (session: ProfileSession) => {
-    setProfileToken(session.profileToken);
-    setProfile(session.profile);
-    await saveProfileSession(session);
-  };
-
-  const sendOtp = async () => {
-    setError('');
-    setBusy(true);
-    try {
-      const result = await profileApi.start(email.trim());
-      setEmail(result.email);
-      setStep('otp');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not send verification code');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    setError('');
-    setBusy(true);
-    try {
-      const result = await profileApi.verify(email.trim(), otp.trim());
-      await persist({
-        email: result.email,
-        profileToken: result.profileToken,
-        profile: result.profile,
-      });
-      applyProfile(result.profile, result.email);
-      setOtp('');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Verification failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const saveProfile = async () => {
     setError('');
     setBusy(true);
     try {
-      const result = await profileApi.updateMe(email, profileToken, {
+      const session = saveLocalProfile({
         fullName: fullName.trim(),
+        email: email.trim(),
         phone: phone.trim(),
         address: address.trim(),
         organization: organization.trim(),
       });
-      await persist({
-        email: result.email,
-        profileToken,
-        profile: result.profile,
-      });
-      setProfile(result.profile);
-      setStep('card');
+      await saveProfileSession(session);
+      applyProfile(session.profile);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save profile');
     } finally {
@@ -158,13 +89,12 @@ export default function ProfileScreen() {
   const signOut = async () => {
     await clearProfileSession();
     setProfile(null);
-    setProfileToken('');
-    setOtp('');
+    setEmail('');
     setFullName('');
     setPhone('');
     setAddress('');
     setOrganization('');
-    setStep('email');
+    setStep('edit');
     setError('');
   };
 
@@ -200,63 +130,10 @@ export default function ProfileScreen() {
         >
           <Text style={styles.heading}>My profile</Text>
           <Text style={styles.subheading}>
-            Add your details and share them with a QR code.
+            Add your details and share them with a QR code. Saved on this phone only.
           </Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          {step === 'email' ? (
-            <View style={styles.card}>
-              <FormField
-                label="Email"
-                required
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder="you@example.com"
-              />
-              <Pressable
-                style={[styles.primaryBtn, busy && styles.btnDisabled]}
-                disabled={busy || !email.trim()}
-                onPress={sendOtp}
-              >
-                {busy ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <Text style={styles.primaryBtnText}>Send verification code</Text>
-                )}
-              </Pressable>
-            </View>
-          ) : null}
-
-          {step === 'otp' ? (
-            <View style={styles.card}>
-              <Text style={styles.hint}>Enter the code sent to {email}</Text>
-              <FormField
-                label="Verification code"
-                required
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="number-pad"
-                placeholder="6-digit code"
-              />
-              <Pressable
-                style={[styles.primaryBtn, busy && styles.btnDisabled]}
-                disabled={busy || otp.trim().length < 4}
-                onPress={verifyOtp}
-              >
-                {busy ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <Text style={styles.primaryBtnText}>Verify</Text>
-                )}
-              </Pressable>
-              <Pressable style={styles.linkBtn} onPress={() => setStep('email')} disabled={busy}>
-                <Text style={styles.linkText}>Change email</Text>
-              </Pressable>
-            </View>
-          ) : null}
 
           {step === 'edit' ? (
             <View style={styles.card}>
@@ -269,9 +146,12 @@ export default function ProfileScreen() {
               />
               <FormField
                 label="Email"
+                required
                 value={email}
-                editable={false}
-                style={styles.readOnly}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="you@example.com"
               />
               <FormField
                 label="Contact"
@@ -306,9 +186,11 @@ export default function ProfileScreen() {
                   <Text style={styles.primaryBtnText}>Save profile</Text>
                 )}
               </Pressable>
-              <Pressable style={styles.linkBtn} onPress={signOut}>
-                <Text style={styles.linkText}>Sign out</Text>
-              </Pressable>
+              {profile ? (
+                <Pressable style={styles.linkBtn} onPress={signOut}>
+                  <Text style={styles.linkText}>Clear profile</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
 
@@ -335,7 +217,7 @@ export default function ProfileScreen() {
                 <Text style={styles.secondaryBtnText}>Edit details</Text>
               </Pressable>
               <Pressable style={styles.linkBtn} onPress={signOut}>
-                <Text style={styles.linkText}>Sign out</Text>
+                <Text style={styles.linkText}>Clear profile</Text>
               </Pressable>
             </View>
           ) : null}
@@ -429,10 +311,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: '600',
     fontSize: 13,
-  },
-  readOnly: {
-    backgroundColor: '#F8FAFC',
-    color: colors.textMuted,
   },
   qrWrap: {
     alignItems: 'center',
