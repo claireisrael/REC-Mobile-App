@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { config } from '@/lib/config';
@@ -10,11 +9,19 @@ const RECOMMENDATIONS_URL = config.recommendationsUrl;
 export function RecActionsBadge() {
   if (!RECOMMENDATIONS_URL) return null;
 
+  const open = async () => {
+    try {
+      await Linking.openURL(RECOMMENDATIONS_URL);
+    } catch {
+      Alert.alert('Could not open link', RECOMMENDATIONS_URL);
+    }
+  };
+
   return (
     <View style={styles.section}>
       <Pressable
         style={({ pressed }) => [styles.badge, pressed && styles.badgePressed]}
-        onPress={() => router.push('/rec-actions')}
+        onPress={open}
       >
         <View style={styles.iconWrap}>
           <Ionicons name="sparkles-outline" size={18} color={colors.accentDark} />
@@ -22,10 +29,10 @@ export function RecActionsBadge() {
         <View style={styles.copy}>
           <Text style={styles.badgeTitle}>REC25 Actions</Text>
           <Text style={styles.badgeSubtitle} numberOfLines={2}>
-            Track every REC recommendation through to delivery — who is advancing it and progress across years.
+            Follow REC recommendations and progress.
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.accentDark} />
+        <Ionicons name="open-outline" size={18} color={colors.accentDark} />
       </Pressable>
     </View>
   );
