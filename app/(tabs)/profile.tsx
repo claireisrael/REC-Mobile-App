@@ -48,7 +48,7 @@ export default function ProfileScreen() {
     setPhone(next?.phone || '');
     setAddress(next?.address || '');
     setOrganization(next?.organization || '');
-    if (next?.cardToken && next?.cardUrl) {
+    if (next?.fullName && next?.phone && next?.address) {
       setStep('card');
     } else {
       setStep('edit');
@@ -76,7 +76,7 @@ export default function ProfileScreen() {
           });
         } catch {
           if (cancelled) return;
-          if (session.profile?.cardUrl) {
+          if (session.profile?.fullName) {
             applyProfile(session.profile, session.email);
           } else {
             await clearProfileSession();
@@ -198,10 +198,9 @@ export default function ProfileScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.heading}>My business card</Text>
+          <Text style={styles.heading}>My profile</Text>
           <Text style={styles.subheading}>
-            Save your contact details and share a QR code at the conference. This is separate from
-            conference registration and check-in badges.
+            Add your details and share them with a QR code.
           </Text>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -304,7 +303,7 @@ export default function ProfileScreen() {
                 {busy ? (
                   <ActivityIndicator color={colors.white} />
                 ) : (
-                  <Text style={styles.primaryBtnText}>Save & show QR</Text>
+                  <Text style={styles.primaryBtnText}>Save profile</Text>
                 )}
               </Pressable>
               <Pressable style={styles.linkBtn} onPress={signOut}>
@@ -322,7 +321,7 @@ export default function ProfileScreen() {
                   <Text style={styles.hint}>Save your profile to generate a QR code.</Text>
                 )}
               </View>
-              <Text style={styles.qrCaption}>Scan to save this contact on a phone</Text>
+              <Text style={styles.qrCaption}>Scan to share your profile</Text>
               <Text style={styles.cardName}>{profile.fullName}</Text>
               {profile.organization ? (
                 <Text style={styles.cardMeta}>{profile.organization}</Text>

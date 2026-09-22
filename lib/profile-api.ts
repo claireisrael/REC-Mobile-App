@@ -26,17 +26,30 @@ export type ProfileSession = {
   profile: NetworkingProfile | null;
 };
 
+async function readApiError(response: Response, fallback: string) {
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text) as ApiError;
+    if (data.error) return data.error;
+  } catch {
+    // HTML 404 pages return empty error object from failed JSON parse
+  }
+  if (response.status === 404) {
+    return 'Profile is not available on the server yet. Please try again after the next update.';
+  }
+  return fallback;
+}
+
 async function postJson<T>(path: string, body: Record<string, unknown>): Promise<T> {
   const response = await fetch(`${config.apiBaseUrl}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const data = (await response.json().catch(() => ({}))) as T & ApiError;
   if (!response.ok) {
-    throw new Error(data.error || 'Profile request failed');
+    throw new Error(await readApiError(response, 'Could not send verification code'));
   }
-  return data;
+  return (await response.json()) as T;
 }
 
 async function getJson<T>(path: string, profileToken?: string): Promise<T> {
@@ -46,11 +59,10 @@ async function getJson<T>(path: string, profileToken?: string): Promise<T> {
     cache: 'no-store',
     headers,
   });
-  const data = (await response.json().catch(() => ({}))) as T & ApiError;
   if (!response.ok) {
-    throw new Error(data.error || 'Profile request failed');
+    throw new Error(await readApiError(response, 'Could not load profile'));
   }
-  return data;
+  return (await response.json()) as T;
 }
 
 async function putJson<T>(path: string, body: Record<string, unknown>): Promise<T> {
@@ -62,11 +74,10 @@ async function putJson<T>(path: string, body: Record<string, unknown>): Promise<
     },
     body: JSON.stringify(body),
   });
-  const data = (await response.json().catch(() => ({}))) as T & ApiError;
   if (!response.ok) {
-    throw new Error(data.error || 'Profile request failed');
+    throw new Error(await readApiError(response, 'Could not save profile'));
   }
-  return data;
+  return (await response.json()) as T;
 }
 
 export async function loadProfileSession(): Promise<ProfileSession | null> {
