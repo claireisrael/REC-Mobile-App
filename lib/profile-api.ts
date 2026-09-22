@@ -69,6 +69,12 @@ export async function loadProfileSession(): Promise<ProfileSession | null> {
   }
 }
 
+export async function hasCompleteProfile(): Promise<boolean> {
+  const session = await loadProfileSession();
+  const p = session?.profile;
+  return Boolean(p?.fullName && p?.email && p?.phone && p?.address);
+}
+
 export async function saveProfileSession(session: ProfileSession): Promise<void> {
   await AsyncStorage.setItem(
     STORAGE_KEY,
@@ -93,6 +99,16 @@ export function saveLocalProfile(fields: {
 }): ProfileSession {
   const profile = validateProfile(fields);
   return { email: profile.email, profile };
+}
+
+export function getProfileInitials(fullName: string) {
+  const parts = String(fullName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return 'ME';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 /** Mobile-only QR payload — contact card, no web page required. */

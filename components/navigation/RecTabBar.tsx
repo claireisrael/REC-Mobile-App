@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
+import { useAppData } from '@/context/AppDataContext';
 import { tabHref } from '@/lib/routes';
 
 type RecTabBarProps = {
@@ -21,7 +22,6 @@ type RecTabBarProps = {
     }
   >;
   navigation: {
-    // Expo Router / React Navigation emit signature varies by SDK version.
     emit: (...args: any[]) => { defaultPrevented?: boolean };
   };
 };
@@ -32,6 +32,8 @@ type TabConfig = {
   icon: keyof typeof Ionicons.glyphMap;
   iconFocused: keyof typeof Ionicons.glyphMap;
   accent?: boolean;
+  /** Match web navbar: only show Register when conference.registrationOpen */
+  requiresRegistrationOpen?: boolean;
 };
 
 const TAB_CONFIG: TabConfig[] = [
@@ -45,12 +47,15 @@ const TAB_CONFIG: TabConfig[] = [
     icon: 'ticket-outline',
     iconFocused: 'ticket',
     accent: true,
+    requiresRegistrationOpen: true,
   },
 ];
 
 export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { conference } = useAppData();
+  const registrationOpen = conference?.registrationOpen === true;
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -58,6 +63,7 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
         {state.routes.map((route, index) => {
           const config = TAB_CONFIG.find((tab) => tab.routeName === route.name);
           if (!config) return null;
+          if (config.requiresRegistrationOpen && !registrationOpen) return null;
 
           const isFocused = state.index === index;
           const { options } = descriptors[route.key];
@@ -75,7 +81,10 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
           };
 
           const onLongPress = () => {
-            navigation.emit({ type: 'tabLongPress', target: route.key });
+            navigation.emit({
+              type: 'tabLongPress',
+              target: route.key,
+            });
           };
 
           const iconName = isFocused ? config.iconFocused : config.icon;

@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppDataProvider } from '@/context/AppDataContext';
 import { RecChatbotHost } from '@/components/chatbot/RecChatbotHost';
+import { ProfileSetupHost } from '@/components/profile/ProfileSetupHost';
 import { colors } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -36,6 +37,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="rec-actions" options={{ presentation: 'card' }} />
           </Stack>
+          <ProfileSetupHost />
           <RecChatbotHost />
         </View>
       </AppDataProvider>
