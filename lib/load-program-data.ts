@@ -1,4 +1,3 @@
-import { isAppwriteConfigured } from '@/lib/config';
 import { fetchPublicProgramData } from '@/lib/public-program-api';
 import type { PublicProgramData } from '@/lib/types';
 
@@ -13,57 +12,28 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
   ]);
 }
 
-async function loadFromAppwrite(): Promise<PublicProgramData> {
-  const { apiService } = await import('@/lib/api-service');
-
-  const conference = await apiService.getActiveConference();
-  if (!conference) {
-    throw new Error('No active conference found.');
-  }
-
-  const program = await apiService.getPublishedProgram(conference.$id);
-  if (!program) {
-    throw new Error('No published program is available yet.');
-  }
-
-  const [sessions, timeBlocks] = await Promise.all([
-    apiService.getPublishedSessions(program.$id),
-    apiService.getProgramTimeBlocks(program.$id),
-  ]);
-
-  // Sponsors load separately so a sponsor failure never blocks the program (matches web).
-  let sponsorCategories: PublicProgramData['sponsorCategories'] = [];
-  let sponsors: PublicProgramData['sponsors'] = [];
-  try {
-    const sponsorData = await apiService.getConferenceSponsors(conference.$id);
-    sponsorCategories = sponsorData.categories;
-    sponsors = sponsorData.sponsors;
-  } catch (error) {
-    console.error('Error loading sponsors:', error);
-  }
-
-  return {
-    conference,
-    program,
-    sessions,
-    timeBlocks,
-    sponsorCategories,
-    sponsors,
-  };
-}
-
 /**
- * Load conference data — Appwrite first (same as web home/sponsors pages),
- * web API only when Appwrite keys are not configured.
+ * Load conference program the same way as the web Program page:
+ * `GET /api/program/public` (server-side Appwrite with published filters).
+ *
+ * Do not use client/guest Appwrite for sessions — guest permissions can hide
+ * published sessions that the web API still returns.
+ *
+ * Sponsors stay on Appwrite via `loadConferenceSponsors` in AppDataContext.
  */
 export async function loadProgramData(): Promise<PublicProgramData> {
-  if (isAppwriteConfigured()) {
-    return withTimeout(
-      loadFromAppwrite(),
-      LOAD_TIMEOUT_MS,
-      'Loading timed out. Check your internet connection and try again.'
-    );
-  }
+  const data = await withTimeout(
+    fetchPublicProgramData(),
+    LOAD_TIMEOUT_MS,
+    'Loading timed out. Check your internet connection and try again.'
+  );
 
-  return fetchPublicProgramData();
+  return {
+    conference: data.conference,
+    program: data.program,
+    sessions: data.sessions || [],
+    timeBlocks: data.timeBlocks || [],
+    sponsorCategories: data.sponsorCategories || [],
+    sponsors: data.sponsors || [],
+  };
 }
