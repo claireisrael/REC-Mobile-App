@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -29,8 +29,20 @@ type ProfileSetupModalProps = {
 
 type Step = 0 | 1 | 2;
 
-const FOOTER_CTA = 54;
-const FOOTER_TOP_PAD = 12;
+const STEP_META = [
+  {
+    title: 'Welcome to REC26',
+    subtitle: 'A few details create your shareable contact card for the conference floor.',
+  },
+  {
+    title: 'How should people reach you?',
+    subtitle: 'This stays on your phone. You can change it anytime from Profile.',
+  },
+  {
+    title: 'Your professional identity',
+    subtitle: 'Add your photo and organisation so attendees recognise you.',
+  },
+] as const;
 
 function SoftField({
   label,
@@ -121,25 +133,6 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
     fieldOffsets.current[key] = event.nativeEvent.layout.y;
   };
 
-  const stepMeta = useMemo(
-    () =>
-      [
-        {
-          title: 'Welcome to REC26',
-          subtitle: 'A few details create your shareable contact card for the conference floor.',
-        },
-        {
-          title: 'How should people reach you?',
-          subtitle: 'This stays on your phone. You can change it anytime from Profile.',
-        },
-        {
-          title: 'Your professional identity',
-          subtitle: 'Add your photo and organisation so attendees recognise you.',
-        },
-      ] as const,
-    []
-  );
-
   const validateStep = (current: Step): string | null => {
     if (current === 1) {
       if (!fullName.trim()) return 'Please enter your full name.';
@@ -198,10 +191,33 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
     }
   };
 
-  const meta = stepMeta[step];
+  const meta = STEP_META[step];
   const keyboardOpen = keyboardHeight > 0;
-  const footerPadBottom = keyboardOpen ? 10 : Math.max(insets.bottom, 16);
-  const footerReserve = FOOTER_TOP_PAD + FOOTER_CTA + footerPadBottom + 12;
+  const scrollBottomPad =
+    Math.max(insets.bottom, 20) + (keyboardOpen ? keyboardHeight + 16 : 8);
+
+  const formCta =
+    step === 1 ? (
+      <Pressable style={[styles.cta, styles.formCta]} onPress={goNext}>
+        <Text style={styles.ctaText}>Continue</Text>
+        <Ionicons name="arrow-forward" size={18} color={colors.white} />
+      </Pressable>
+    ) : step === 2 ? (
+      <Pressable
+        style={[styles.cta, styles.formCta, busy && styles.ctaDisabled]}
+        disabled={busy}
+        onPress={submit}
+      >
+        {busy ? (
+          <ActivityIndicator color={colors.white} />
+        ) : (
+          <>
+            <Text style={styles.ctaText}>Create my profile</Text>
+            <Ionicons name="checkmark" size={18} color={colors.white} />
+          </>
+        )}
+      </Pressable>
+    ) : null;
 
   return (
     <Modal
@@ -250,12 +266,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
         <View style={styles.sheet}>
           <ScrollView
             ref={scrollRef}
-            contentContainerStyle={[
-              styles.sheetContent,
-              step === 0
-                ? { paddingBottom: Math.max(insets.bottom, 24) }
-                : { paddingBottom: footerReserve + keyboardHeight },
-            ]}
+            contentContainerStyle={[styles.sheetContent, { paddingBottom: scrollBottomPad }]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
@@ -321,6 +332,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
                     placeholder="As you’d like it on your card"
                     autoComplete="name"
                     autoCapitalize="words"
+                    returnKeyType="next"
                     onFocused={() => scrollFieldIntoView('fullName')}
                   />
                 </View>
@@ -334,6 +346,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
                     autoCapitalize="none"
                     keyboardType="email-address"
                     autoComplete="email"
+                    returnKeyType="next"
                     onFocused={() => scrollFieldIntoView('email')}
                   />
                 </View>
@@ -348,23 +361,27 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
                     onFocused={() => scrollFieldIntoView('phone')}
                   />
                 </View>
+                {formCta}
               </View>
             ) : null}
 
             {step === 2 ? (
               <View style={styles.fields}>
-                <ProfileAvatarPicker
-                  fullName={fullName}
-                  photoUri={photoUri}
-                  onChange={setPhotoUri}
-                  size={keyboardOpen ? 72 : 100}
-                />
+                {!keyboardOpen ? (
+                  <ProfileAvatarPicker
+                    fullName={fullName}
+                    photoUri={photoUri}
+                    onChange={setPhotoUri}
+                    size={100}
+                  />
+                ) : null}
                 <View onLayout={rememberFieldOffset('organization')}>
                   <SoftField
                     label="Organisation"
                     value={organization}
                     onChangeText={setOrganization}
                     placeholder="Company, ministry, or institution"
+                    returnKeyType="next"
                     onFocused={() => scrollFieldIntoView('organization')}
                   />
                 </View>
@@ -379,43 +396,10 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
                     onFocused={() => scrollFieldIntoView('address')}
                   />
                 </View>
+                {formCta}
               </View>
             ) : null}
           </ScrollView>
-
-          {step > 0 ? (
-            <View
-              style={[
-                styles.footer,
-                {
-                  bottom: keyboardHeight,
-                  paddingBottom: footerPadBottom,
-                },
-              ]}
-            >
-              {step === 1 ? (
-                <Pressable style={styles.cta} onPress={goNext}>
-                  <Text style={styles.ctaText}>Continue</Text>
-                  <Ionicons name="arrow-forward" size={18} color={colors.white} />
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={[styles.cta, busy && styles.ctaDisabled]}
-                  disabled={busy}
-                  onPress={submit}
-                >
-                  {busy ? (
-                    <ActivityIndicator color={colors.white} />
-                  ) : (
-                    <>
-                      <Text style={styles.ctaText}>Create my profile</Text>
-                      <Ionicons name="checkmark" size={18} color={colors.white} />
-                    </>
-                  )}
-                </Pressable>
-              )}
-            </View>
-          ) : null}
         </View>
       </View>
     </Modal>
@@ -577,24 +561,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.error,
   },
-  footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    paddingHorizontal: 28,
-    paddingTop: FOOTER_TOP_PAD,
-    backgroundColor: 'rgba(255,255,255,0.96)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
   cta: {
     backgroundColor: colors.primary,
-    minHeight: FOOTER_CTA,
+    minHeight: 54,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  formCta: {
+    marginTop: 28,
   },
   ctaDisabled: {
     opacity: 0.7,

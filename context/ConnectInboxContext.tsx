@@ -77,7 +77,8 @@ export function ConnectInboxProvider({ children }: { children: ReactNode }) {
     () => ({
       unreadCount,
       pendingIncomingCount,
-      badgeCount: Math.max(unreadCount, pendingIncomingCount),
+      // Prefer unread notices for the tab badge; fall back to pending requests.
+      badgeCount: unreadCount > 0 ? unreadCount : pendingIncomingCount,
       refreshInbox,
     }),
     [unreadCount, pendingIncomingCount, refreshInbox]

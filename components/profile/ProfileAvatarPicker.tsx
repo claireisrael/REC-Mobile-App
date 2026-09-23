@@ -10,7 +10,6 @@ type ProfileAvatarPickerProps = {
   photoUri?: string | null;
   onChange: (uri: string | null) => void;
   size?: number;
-  light?: boolean;
 };
 
 export function ProfileAvatarPicker({
@@ -18,7 +17,6 @@ export function ProfileAvatarPicker({
   photoUri,
   onChange,
   size = 96,
-  light = false,
 }: ProfileAvatarPickerProps) {
   const applyPickedUri = async (uri: string) => {
     try {
@@ -97,11 +95,7 @@ export function ProfileAvatarPicker({
       accessibilityLabel="Upload profile photo"
     >
       <View
-        style={[
-          styles.avatar,
-          { width: size, height: size, borderRadius: size / 2 },
-          light && styles.avatarLight,
-        ]}
+        style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
       >
         {photoUri ? (
           <Image
@@ -109,17 +103,13 @@ export function ProfileAvatarPicker({
             style={{ width: size, height: size, borderRadius: size / 2 }}
           />
         ) : (
-          <Text style={[styles.initials, { fontSize: size * 0.32 }, light && styles.initialsLight]}>
-            {initials}
-          </Text>
+          <Text style={[styles.initials, { fontSize: size * 0.32 }]}>{initials}</Text>
         )}
       </View>
-      <View style={[styles.badge, light && styles.badgeLight]}>
-        <Ionicons name="camera" size={14} color={light ? colors.primaryDark : colors.white} />
+      <View style={styles.badge}>
+        <Ionicons name="camera" size={14} color={colors.white} />
       </View>
-      <Text style={[styles.hint, light && styles.hintLight]}>
-        {photoUri ? 'Change photo' : 'Add photo'}
-      </Text>
+      <Text style={styles.hint}>{photoUri ? 'Change photo' : 'Add photo'}</Text>
     </Pressable>
   );
 }
@@ -137,15 +127,8 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: `${colors.primary}33`,
   },
-  avatarLight: {
-    backgroundColor: colors.accent,
-    borderColor: 'rgba(255,255,255,0.45)',
-  },
   initials: {
     fontWeight: '700',
-    color: colors.primaryDark,
-  },
-  initialsLight: {
     color: colors.primaryDark,
   },
   badge: {
@@ -161,17 +144,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.white,
   },
-  badgeLight: {
-    backgroundColor: colors.accent,
-    borderColor: colors.white,
-  },
   hint: {
     marginTop: 8,
     fontSize: 12,
     fontWeight: '600',
     color: colors.primary,
-  },
-  hintLight: {
-    color: 'rgba(255,255,255,0.9)',
   },
 });

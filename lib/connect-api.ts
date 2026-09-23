@@ -245,10 +245,6 @@ export const connectApi = {
     return rows.sort((a, b) => String(b.$createdAt || '').localeCompare(String(a.$createdAt || '')));
   },
 
-  async markNotificationRead(id: string): Promise<void> {
-    await updateDocument(notificationsId(), id, { read: true });
-  },
-
   async markAllNotificationsRead(email: string): Promise<void> {
     const rows = await this.listNotifications(email);
     await Promise.all(

@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   ImageBackground,
   KeyboardAvoidingView,
@@ -32,7 +31,7 @@ import {
 } from '@/lib/connect-api';
 import { getHeroImageSource } from '@/lib/hero-image';
 import { registerConnectPushToken } from '@/lib/notifications';
-import { getProfileInitials, loadProfileSession } from '@/lib/profile-api';
+import { getProfileInitials } from '@/lib/profile-api';
 import { routes } from '@/lib/routes';
 
 function statusFor(
@@ -74,9 +73,8 @@ export default function ConnectScreen() {
   const reload = useCallback(async () => {
     setError('');
     try {
-      await refreshProfile();
-      const session = await loadProfileSession();
-      const liveEmail = session?.profile?.email || '';
+      const latest = await refreshProfile();
+      const liveEmail = (latest?.email || profile?.email || '').trim().toLowerCase();
 
       const [directory, myRequests, notifs] = await Promise.all([
         connectApi.listPeople(),
@@ -87,14 +85,15 @@ export default function ConnectScreen() {
       setRequests(myRequests);
       setNotifications(notifs);
 
+      // Best-effort push registration (no-op in Expo Go).
       if (liveEmail) {
-        registerConnectPushToken(liveEmail).catch(() => undefined);
+        void registerConnectPushToken(liveEmail).catch(() => undefined);
       }
       await refreshInbox();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load Connect');
     }
-  }, [refreshProfile, refreshInbox]);
+  }, [profile?.email, refreshProfile, refreshInbox]);
 
   useFocusEffect(
     useCallback(() => {
@@ -120,6 +119,15 @@ export default function ConnectScreen() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const openConnectSheet = (person: ConnectPerson) => {
+    if (!hasProfile) {
+      router.navigate(routes.profile);
+      return;
+    }
+    setNoteTarget(person);
+    setNote('');
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await reload();
@@ -143,10 +151,6 @@ export default function ConnectScreen() {
       setNoteTarget(null);
       setSuccess(`Request sent to ${targetName}. You’ll be notified when they respond.`);
       await reload();
-      Alert.alert(
-        'Request sent',
-        `${targetName} will see your connection request in Connect. You’ll get a notice when they accept or decline.`
-      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not send request');
     } finally {
@@ -235,31 +239,11 @@ export default function ConnectScreen() {
               <Text style={styles.statusPendingText}>Pending</Text>
             </View>
           ) : declined ? (
-            <Pressable
-              style={styles.connectBtn}
-              onPress={() => {
-                if (!hasProfile) {
-                  router.navigate(routes.profile);
-                  return;
-                }
-                setNoteTarget(item);
-                setNote('');
-              }}
-            >
+            <Pressable style={styles.connectBtn} onPress={() => openConnectSheet(item)}>
               <Text style={styles.connectBtnText}>Retry</Text>
             </Pressable>
           ) : (
-            <Pressable
-              style={styles.connectBtn}
-              onPress={() => {
-                if (!hasProfile) {
-                  router.navigate(routes.profile);
-                  return;
-                }
-                setNoteTarget(item);
-                setNote('');
-              }}
-            >
+            <Pressable style={styles.connectBtn} onPress={() => openConnectSheet(item)}>
               <Ionicons name="person-add-outline" size={14} color={colors.primaryDark} />
               <Text style={styles.connectBtnText}>Connect</Text>
             </Pressable>

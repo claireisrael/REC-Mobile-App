@@ -1,11 +1,11 @@
 import { Tabs } from 'expo-router';
 
-import { RecTabBar } from '@/components/navigation/RecTabBar';
+import { RecTabBar, type RecTabBarProps } from '@/components/navigation/RecTabBar';
 
 export default function TabLayout() {
   return (
     <Tabs
-      tabBar={(props) => <RecTabBar {...(props as any)} />}
+      tabBar={(props) => <RecTabBar {...(props as unknown as RecTabBarProps)} />}
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,

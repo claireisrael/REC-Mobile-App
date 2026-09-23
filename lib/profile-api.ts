@@ -75,21 +75,12 @@ export function isProfileComplete(profile: NetworkingProfile | null | undefined)
 export async function loadProfileSession(): Promise<ProfileSession | null> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
-  const parsed = JSON.parse(raw) as ProfileSession & { profileToken?: string };
+  const parsed = JSON.parse(raw) as ProfileSession;
   if (!parsed?.email || !parsed?.profile?.fullName) return null;
   return {
     email: parsed.email,
     profile: parsed.profile,
   };
-}
-
-export async function hasCompleteProfile(): Promise<boolean> {
-  try {
-    const session = await loadProfileSession();
-    return isProfileComplete(session?.profile);
-  } catch {
-    return false;
-  }
 }
 
 function syncDirectory(profile: NetworkingProfile) {

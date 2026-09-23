@@ -23,13 +23,13 @@ export function SessionCard({ session, compact = false, continuation = false }: 
   const { prefs, update } = useSessionPrefs();
   const pref = prefs[session.$id] || {};
 
-  const toggle = async (key: 'attending' | 'bookmarked' | 'remind') => {
+  const toggle = (key: 'attending' | 'bookmarked' | 'remind') => {
     const next = !pref[key];
-    await update(
+    void update(
       session.$id,
       { [key]: next },
       { title: session.title, startTime: session.startTime }
-    );
+    ).catch(() => undefined);
   };
 
   return (
@@ -65,7 +65,7 @@ export function SessionCard({ session, compact = false, continuation = false }: 
 
         <View style={styles.actionsRow}>
           <Pressable
-            style={[styles.actionChip, pref.bookmarked && styles.actionChipActive]}
+            style={[styles.actionChip, styles.chipSave, pref.bookmarked && styles.chipSaveOn]}
             onPress={() => toggle('bookmarked')}
             hitSlop={6}
           >
@@ -74,35 +74,39 @@ export function SessionCard({ session, compact = false, continuation = false }: 
               size={14}
               color={pref.bookmarked ? colors.primaryDark : colors.primary}
             />
-            <Text style={[styles.actionText, pref.bookmarked && styles.actionTextActive]}>
+            <Text style={[styles.actionText, styles.textSave, pref.bookmarked && styles.textSaveOn]}>
               Save
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.actionChip, pref.attending && styles.actionChipAttend]}
+            style={[styles.actionChip, styles.chipAttend, pref.attending && styles.chipAttendOn]}
             onPress={() => toggle('attending')}
             hitSlop={6}
           >
             <Ionicons
               name={pref.attending ? 'checkmark-circle' : 'checkmark-circle-outline'}
               size={14}
-              color={pref.attending ? colors.success : colors.primary}
+              color={pref.attending ? '#15803D' : '#16A34A'}
             />
-            <Text style={[styles.actionText, pref.attending && styles.actionTextAttend]}>
+            <Text
+              style={[styles.actionText, styles.textAttend, pref.attending && styles.textAttendOn]}
+            >
               Attend
             </Text>
           </Pressable>
           <Pressable
-            style={[styles.actionChip, pref.remind && styles.actionChipRemind]}
+            style={[styles.actionChip, styles.chipRemind, pref.remind && styles.chipRemindOn]}
             onPress={() => toggle('remind')}
             hitSlop={6}
           >
             <Ionicons
               name={pref.remind ? 'notifications' : 'notifications-outline'}
               size={14}
-              color={pref.remind ? colors.accentDark : colors.primary}
+              color={pref.remind ? '#B45309' : '#D97706'}
             />
-            <Text style={[styles.actionText, pref.remind && styles.actionTextRemind]}>
+            <Text
+              style={[styles.actionText, styles.textRemind, pref.remind && styles.textRemindOn]}
+            >
               Remind
             </Text>
           </Pressable>
@@ -256,37 +260,55 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: `${colors.primary}44`,
-    backgroundColor: `${colors.primary}0D`,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  actionChipActive: {
-    backgroundColor: `${colors.primary}22`,
+  chipSave: {
+    backgroundColor: `${colors.primary}12`,
+    borderColor: `${colors.primary}44`,
+  },
+  chipSaveOn: {
+    backgroundColor: `${colors.primary}28`,
     borderColor: colors.primary,
   },
-  actionChipAttend: {
-    backgroundColor: `${colors.success}18`,
-    borderColor: `${colors.success}66`,
+  chipAttend: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
   },
-  actionChipRemind: {
-    backgroundColor: `${colors.accent}22`,
-    borderColor: `${colors.accent}99`,
+  chipAttendOn: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#16A34A',
+  },
+  chipRemind: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FCD34D',
+  },
+  chipRemindOn: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#D97706',
   },
   actionText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  textSave: {
     color: colors.primary,
   },
-  actionTextActive: {
+  textSaveOn: {
     color: colors.primaryDark,
   },
-  actionTextAttend: {
-    color: colors.success,
+  textAttend: {
+    color: '#16A34A',
   },
-  actionTextRemind: {
-    color: colors.accentDark,
+  textAttendOn: {
+    color: '#15803D',
+  },
+  textRemind: {
+    color: '#D97706',
+  },
+  textRemindOn: {
+    color: '#B45309',
   },
   organizerRow: {
     flexDirection: 'row',

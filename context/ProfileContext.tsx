@@ -10,7 +10,6 @@ import {
 
 import {
   clearProfileSession,
-  hasCompleteProfile,
   isProfileComplete,
   loadProfileSession,
   saveLocalProfile,
@@ -18,19 +17,21 @@ import {
   type NetworkingProfile,
 } from '@/lib/profile-api';
 
+type ProfileFields = {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  organization?: string;
+  photoUri?: string | null;
+};
+
 type ProfileContextValue = {
   profile: NetworkingProfile | null;
   ready: boolean;
   hasProfile: boolean;
-  refresh: () => Promise<void>;
-  saveProfile: (fields: {
-    fullName: string;
-    email: string;
-    phone: string;
-    address: string;
-    organization?: string;
-    photoUri?: string | null;
-  }) => Promise<NetworkingProfile>;
+  refresh: () => Promise<NetworkingProfile | null>;
+  saveProfile: (fields: ProfileFields) => Promise<NetworkingProfile>;
   clearProfile: () => Promise<void>;
 };
 
@@ -40,44 +41,40 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<NetworkingProfile | null>(null);
   const [ready, setReady] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<NetworkingProfile | null> => {
     try {
       const session = await loadProfileSession();
+      if (session?.profile) {
+        setProfile(session.profile);
+        setReady(true);
+        return session.profile;
+      }
+
+      // Don't wipe a good in-memory profile if storage briefly returns empty.
+      let kept: NetworkingProfile | null = null;
       setProfile((current) => {
-        if (session?.profile) return session.profile;
-        // Keep an in-memory complete profile if storage briefly returns empty
-        // (avoids the “set up profile again” loop right after save).
-        if (isProfileComplete(current)) return current;
-        return null;
+        kept = isProfileComplete(current) ? current : null;
+        return kept;
       });
-    } catch {
-      // Keep whatever profile we already have in memory.
-    } finally {
       setReady(true);
+      return kept;
+    } catch {
+      setReady(true);
+      return null;
     }
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
-  const saveProfile = useCallback(
-    async (fields: {
-      fullName: string;
-      email: string;
-      phone: string;
-      address: string;
-      organization?: string;
-      photoUri?: string | null;
-    }) => {
-      const session = saveLocalProfile(fields);
-      await saveProfileSession(session);
-      setProfile(session.profile);
-      setReady(true);
-      return session.profile;
-    },
-    []
-  );
+  const saveProfile = useCallback(async (fields: ProfileFields) => {
+    const session = saveLocalProfile(fields);
+    await saveProfileSession(session);
+    setProfile(session.profile);
+    setReady(true);
+    return session.profile;
+  }, []);
 
   const clearProfile = useCallback(async () => {
     await clearProfileSession();
@@ -104,8 +101,4 @@ export function useProfile() {
   const ctx = useContext(ProfileContext);
   if (!ctx) throw new Error('useProfile must be used within ProfileProvider');
   return ctx;
-}
-
-export async function checkHasCompleteProfile() {
-  return hasCompleteProfile();
 }

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import Constants from 'expo-constants';
+import { Alert } from 'react-native';
 
 import { cancelScheduledNotification, scheduleSessionReminder } from '@/lib/notifications';
 
@@ -32,6 +33,31 @@ export async function loadSessionPrefs(): Promise<PrefsMap> {
   return readAll();
 }
 
+function explainRemindFailure(startTime?: string) {
+  if (Constants.appOwnership === 'expo') {
+    Alert.alert(
+      'Reminders need the installed app',
+      'Session reminders use your phone’s notification clock. They work in the REC APK, not in Expo Go.'
+    );
+    return;
+  }
+
+  const start = startTime ? new Date(startTime).getTime() : NaN;
+  if (Number.isFinite(start) && start - 15 * 60 * 1000 <= Date.now()) {
+    Alert.alert(
+      'Too close to start',
+      'This session starts in less than 15 minutes, so a reminder can’t be scheduled.'
+    );
+    return;
+  }
+
+  Alert.alert(
+    'Could not set reminder',
+    'Allow notifications for REC in your phone settings, then try again.'
+  );
+}
+
+/** Persist session Save / Attend / Remind prefs. Schedules a local device reminder when Remind is on. */
 export async function setSessionPref(
   sessionId: string,
   patch: Partial<SessionPref>,
@@ -52,6 +78,9 @@ export async function setSessionPref(
     });
     next.notificationId = notificationId;
     next.remind = Boolean(notificationId);
+    if (!notificationId) {
+      explainRemindFailure(sessionMeta.startTime);
+    }
   }
 
   if (patch.remind === false && prev.notificationId) {
@@ -62,34 +91,4 @@ export async function setSessionPref(
   map[sessionId] = next;
   await writeAll(map);
   return next;
-}
-
-export function useSessionPrefs() {
-  const [prefs, setPrefs] = useState<PrefsMap>({});
-  const [ready, setReady] = useState(false);
-
-  const refresh = useCallback(async () => {
-    const map = await loadSessionPrefs();
-    setPrefs(map);
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  const update = useCallback(
-    async (
-      sessionId: string,
-      patch: Partial<SessionPref>,
-      sessionMeta?: { title: string; startTime: string }
-    ) => {
-      const next = await setSessionPref(sessionId, patch, sessionMeta);
-      setPrefs((prev) => ({ ...prev, [sessionId]: next }));
-      return next;
-    },
-    []
-  );
-
-  return { prefs, ready, update, refresh };
 }

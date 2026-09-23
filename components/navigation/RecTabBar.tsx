@@ -7,7 +7,7 @@ import { colors } from '@/constants/theme';
 import { useConnectInbox } from '@/context/ConnectInboxContext';
 import { tabHref } from '@/lib/routes';
 
-type RecTabBarProps = {
+export type RecTabBarProps = {
   state: {
     index: number;
     routes: { key: string; name: string }[];
@@ -22,7 +22,11 @@ type RecTabBarProps = {
     }
   >;
   navigation: {
-    emit: (...args: any[]) => { defaultPrevented?: boolean };
+    emit: (event: {
+      type: string;
+      target?: string;
+      canPreventDefault?: boolean;
+    }) => { defaultPrevented?: boolean };
   };
 };
 
@@ -84,7 +88,7 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
 
           const iconName = isFocused ? config.iconFocused : config.icon;
           const label = options.title ?? config.label;
-          const showConnectBadge = config.accent && badgeCount > 0;
+          const showConnectBadge = Boolean(config.accent && badgeCount > 0);
 
           if (config.accent) {
             return (
