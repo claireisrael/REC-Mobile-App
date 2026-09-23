@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/constants/theme';
 import { config } from '@/lib/config';
@@ -11,7 +12,14 @@ export function RecActionsBadge() {
 
   const open = async () => {
     try {
-      await Linking.openURL(RECOMMENDATIONS_URL);
+      // Full Safari / Chrome Custom Tab — same site experience as the web, not an in-app WebView.
+      await WebBrowser.openBrowserAsync(RECOMMENDATIONS_URL, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        toolbarColor: '#054653',
+        controlsColor: '#FFB803',
+        enableBarCollapsing: true,
+        showInRecents: true,
+      });
     } catch {
       Alert.alert('Could not open link', RECOMMENDATIONS_URL);
     }
@@ -29,7 +37,7 @@ export function RecActionsBadge() {
         <View style={styles.copy}>
           <Text style={styles.badgeTitle}>REC25 Actions</Text>
           <Text style={styles.badgeSubtitle} numberOfLines={2}>
-            Follow REC recommendations and progress.
+            Open the full recommendations site in your browser.
           </Text>
         </View>
         <Ionicons name="open-outline" size={18} color={colors.accentDark} />

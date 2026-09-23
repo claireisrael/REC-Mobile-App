@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  ImageBackground,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -18,12 +19,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { colors } from '@/constants/theme';
+import { useAppData } from '@/context/AppDataContext';
 import {
   connectApi,
   type ConnectNotification,
   type ConnectPerson,
   type ConnectRequest,
 } from '@/lib/connect-api';
+import { getHeroImageSource } from '@/lib/hero-image';
 import { registerConnectPushToken } from '@/lib/notifications';
 import { getProfileInitials, loadProfileSession, type NetworkingProfile } from '@/lib/profile-api';
 
@@ -44,6 +47,7 @@ function statusFor(
 
 export default function ConnectScreen() {
   const insets = useSafeAreaInsets();
+  const { conference } = useAppData();
   const [profile, setProfile] = useState<NetworkingProfile | null>(null);
   const [people, setPeople] = useState<ConnectPerson[]>([]);
   const [requests, setRequests] = useState<ConnectRequest[]>([]);
@@ -234,7 +238,15 @@ export default function ConnectScreen() {
 
   return (
     <ScreenContainer safeTop={false} statusBarStyle="light">
-      <LinearGradient colors={['#054653', '#0B7186']} style={[styles.hero, { paddingTop: insets.top + 12 }]}>
+      <ImageBackground
+        source={getHeroImageSource(conference?.heroImageUrl)}
+        style={[styles.hero, { paddingTop: insets.top + 12 }]}
+        imageStyle={styles.heroImage}
+      >
+        <LinearGradient
+          colors={['rgba(3,40,48,0.45)', 'rgba(5,70,83,0.88)']}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={styles.heroTop}>
           <View style={{ flex: 1 }}>
             <Text style={styles.kicker}>Networking</Text>
@@ -268,7 +280,7 @@ export default function ConnectScreen() {
             </Pressable>
           ) : null}
         </View>
-      </LinearGradient>
+      </ImageBackground>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -369,6 +381,11 @@ const styles = StyleSheet.create({
   hero: {
     paddingHorizontal: 20,
     paddingBottom: 18,
+    overflow: 'hidden',
+    backgroundColor: colors.primaryDark,
+  },
+  heroImage: {
+    resizeMode: 'cover',
   },
   heroTop: {
     flexDirection: 'row',

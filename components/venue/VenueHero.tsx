@@ -1,7 +1,7 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ImageHeroBanner } from '@/components/layout/ImageHeroBanner';
 import { colors } from '@/constants/theme';
 import type { Conference } from '@/lib/types';
 import { formatDateRange } from '@/lib/program-utils';
@@ -16,17 +16,13 @@ export function VenueHero({ conference }: VenueHeroProps) {
 
   return (
     <View style={styles.wrap}>
-      <LinearGradient
-        colors={['#053D49', '#0B7186', '#084E5C']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+      <ImageHeroBanner
+        imageUrl={conference.heroImageUrl}
+        eyebrow="Venue & Travel"
+        title="Venue & Travel"
+        subtitle={`Everything you need to know about getting to ${shortName}`}
+        tall
       >
-        <Text style={styles.title}>Venue & Travel</Text>
-        <Text style={styles.subtitle}>
-          Everything you need to know about getting to {shortName}
-        </Text>
-
         {dateRange ? (
           <View style={styles.metaRow}>
             <View style={styles.metaChip}>
@@ -43,7 +39,7 @@ export function VenueHero({ conference }: VenueHeroProps) {
             ) : null}
           </View>
         ) : null}
-      </LinearGradient>
+      </ImageHeroBanner>
     </View>
   );
 }
@@ -52,24 +48,6 @@ const styles = StyleSheet.create({
   wrap: {
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-  },
-  gradient: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.white,
-    lineHeight: 34,
-    letterSpacing: -0.4,
-  },
-  subtitle: {
-    marginTop: 10,
-    fontSize: 15,
-    lineHeight: 22,
-    color: 'rgba(255,255,255,0.78)',
   },
   metaRow: {
     flexDirection: 'row',

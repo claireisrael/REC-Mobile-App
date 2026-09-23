@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  ImageBackground,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -20,6 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ProfileSetupModal } from '@/components/profile/ProfileSetupModal';
 import { colors } from '@/constants/theme';
+import { useAppData } from '@/context/AppDataContext';
+import { getHeroImageSource } from '@/lib/hero-image';
 import {
   buildVCard,
   clearProfileSession,
@@ -74,6 +77,7 @@ function DetailLine({
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { conference } = useAppData();
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -179,12 +183,15 @@ export default function ProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={['#033A44', '#054653', '#0B7186']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <ImageBackground
+          source={getHeroImageSource(conference?.heroImageUrl)}
           style={[styles.hero, { paddingTop: insets.top + 28 }]}
+          imageStyle={styles.heroImage}
         >
+          <LinearGradient
+            colors={['rgba(3,40,48,0.4)', 'rgba(5,70,83,0.9)']}
+            style={StyleSheet.absoluteFill}
+          />
           <Text style={styles.brandMark}>REC & EXPO</Text>
           <View style={styles.avatarRing}>
             <View style={styles.avatar}>
@@ -202,7 +209,7 @@ export default function ProfileScreen() {
               ) : null}
             </>
           ) : null}
-        </LinearGradient>
+        </ImageBackground>
 
         {profile ? (
           <View style={styles.body}>
@@ -353,6 +360,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 28,
     paddingBottom: 40,
+    overflow: 'hidden',
+    backgroundColor: colors.primaryDark,
+  },
+  heroImage: {
+    resizeMode: 'cover',
   },
   brandMark: {
     alignSelf: 'flex-start',

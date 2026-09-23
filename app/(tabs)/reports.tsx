@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { ImageHeroBanner } from '@/components/layout/ImageHeroBanner';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ReportCard } from '@/components/reports/ReportCard';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -105,14 +106,13 @@ export default function ReportsScreen() {
   return (
     <ScreenContainer>
       <ScrollView style={styles.screen}>
-        <View style={styles.hero}>
-          <View style={styles.badge}>
-            <Ionicons name="book-outline" size={14} color={colors.primary} />
-            <Text style={styles.badgeText}>Conference Publications</Text>
-          </View>
-          <Text style={styles.title}>{pageConfig.pageTitle}</Text>
-          <Text style={styles.subtitle}>{pageConfig.pageDescription}</Text>
-        </View>
+        <ImageHeroBanner
+          imageUrl={selectedConference?.heroImageUrl || siteConference?.heroImageUrl}
+          eyebrow="Conference Publications"
+          title={pageConfig.pageTitle}
+          subtitle={pageConfig.pageDescription}
+          tall
+        />
 
         <View style={styles.conferenceCard}>
           <View style={styles.conferenceMeta}>

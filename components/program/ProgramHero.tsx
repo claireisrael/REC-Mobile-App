@@ -1,7 +1,7 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ImageHeroBanner } from '@/components/layout/ImageHeroBanner';
 import { ProgramHeroActions } from '@/components/program/ProgramHeroActions';
 import { colors } from '@/constants/theme';
 import type { Conference, Program } from '@/lib/types';
@@ -25,33 +25,22 @@ export function ProgramHero({ conference, program }: ProgramHeroProps) {
 
   return (
     <View style={styles.wrap}>
-      <LinearGradient
-        colors={['#0B7186', '#085A6A', '#054653']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+      <ImageHeroBanner
+        imageUrl={conference.heroImageUrl}
+        eyebrow="Program"
+        title={program.title || 'Conference Program'}
+        highlight={dateRange}
+        subtitle="Plan your sessions, compare halls, and download a copy of the published schedule."
+        tall
+        contentStyle={styles.heroPad}
       >
-        <View style={styles.topRow}>
-          <Text style={styles.eyebrow}>Program</Text>
-          {program.status ? (
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>{program.status}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        <Text style={styles.title} numberOfLines={3}>
-          {program.title || 'Conference Program'}
-        </Text>
-
-        <Text style={styles.date}>{dateRange}</Text>
-
-        <Text style={styles.subtitle} numberOfLines={2}>
-          Plan your sessions, compare halls, and download a copy of the published schedule.
-        </Text>
-
+        {program.status ? (
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusText}>{program.status}</Text>
+          </View>
+        ) : null}
         <ProgramHeroActions conference={conference} variant="hero" />
-      </LinearGradient>
+      </ImageHeroBanner>
 
       {metaItems.length > 0 ? (
         <View style={styles.metaStrip}>
@@ -75,31 +64,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  gradient: {
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 20,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.72)',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+  heroPad: {
+    gap: 12,
   },
   statusBadge: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(255,255,255,0.28)',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    marginBottom: 4,
   },
   statusText: {
     fontSize: 11,
@@ -107,25 +83,6 @@ const styles = StyleSheet.create({
     color: colors.white,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: colors.white,
-    lineHeight: 32,
-    letterSpacing: -0.5,
-  },
-  date: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  subtitle: {
-    marginTop: 10,
-    fontSize: 14,
-    lineHeight: 20,
-    color: 'rgba(255,255,255,0.82)',
   },
   metaStrip: {
     flexDirection: 'row',

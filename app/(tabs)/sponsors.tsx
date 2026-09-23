@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { useRouter } from 'expo-router';
 
 import { MediaCard } from '@/components/gallery/MediaCard';
+import { ImageHeroBanner } from '@/components/layout/ImageHeroBanner';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
@@ -138,16 +139,13 @@ export default function MediaScreen() {
   return (
     <ScreenContainer>
       <ScrollView style={styles.screen}>
-        <View style={styles.hero}>
-          <View style={styles.badge}>
-            <Ionicons name="images-outline" size={14} color={colors.primary} />
-            <Text style={styles.badgeText}>Media Library</Text>
-          </View>
-          <Text style={styles.title}>{conferenceLabel} albums and videos</Text>
-          <Text style={styles.subtitle}>
-            Explore selected conference albums and video highlights.
-          </Text>
-        </View>
+        <ImageHeroBanner
+          imageUrl={conference.heroImageUrl}
+          eyebrow="Media Library"
+          title={`${conferenceLabel} albums and videos`}
+          subtitle="Explore selected conference albums and video highlights."
+          tall
+        />
 
         <View style={styles.conferenceCard}>
           <View style={styles.conferenceMeta}>

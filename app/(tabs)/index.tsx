@@ -158,18 +158,14 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      {heroBackground ? (
-        <ImageBackground
-          source={heroBackground}
-          style={styles.hero}
-          imageStyle={styles.heroImage}
-          resizeMode="cover"
-        >
-          {heroContent}
-        </ImageBackground>
-      ) : (
-        <View style={styles.hero}>{heroContent}</View>
-      )}
+      <ImageBackground
+        source={getHeroImageSource(conference.heroImageUrl)}
+        style={styles.hero}
+        imageStyle={styles.heroImage}
+        resizeMode="cover"
+      >
+        {heroContent}
+      </ImageBackground>
 
       {homeStats ? (
         <HomeStatsBar daysCount={homeStats.daysCount} speakers={homeStats.speakers} />
