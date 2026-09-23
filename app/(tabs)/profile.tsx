@@ -10,6 +10,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TextInputProps,
   View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -17,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { ProfileSetupModal } from '@/components/profile/ProfileSetupModal';
-import { FormField } from '@/components/ui/FormField';
 import { colors } from '@/constants/theme';
 import {
   buildVCard,
@@ -29,24 +30,44 @@ import {
   type NetworkingProfile,
 } from '@/lib/profile-api';
 
-function ContactRow({
-  icon,
+function SoftField({
   label,
+  ...props
+}: TextInputProps & { label: string }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.softField}>
+      <Text style={styles.softLabel}>{label}</Text>
+      <TextInput
+        {...props}
+        placeholderTextColor="#94A3B8"
+        onFocus={(e) => {
+          setFocused(true);
+          props.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          props.onBlur?.(e);
+        }}
+        style={[styles.softInput, focused && styles.softInputFocused, props.style]}
+      />
+    </View>
+  );
+}
+
+function DetailLine({
+  icon,
   value,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
   value: string;
 }) {
   return (
-    <View style={styles.contactRow}>
-      <View style={styles.contactIcon}>
-        <Ionicons name={icon} size={18} color={colors.primary} />
-      </View>
-      <View style={styles.contactCopy}>
-        <Text style={styles.contactLabel}>{label}</Text>
-        <Text style={styles.contactValue}>{value}</Text>
-      </View>
+    <View style={styles.detailLine}>
+      <Ionicons name={icon} size={16} color={colors.primary} />
+      <Text style={styles.detailValue} numberOfLines={2}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -158,80 +179,69 @@ export default function ProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient colors={['#054653', '#0B7186']} style={[styles.hero, { paddingTop: insets.top + 16 }]}>
-          <Text style={styles.heroKicker}>Networking</Text>
-          <Text style={styles.heroTitle}>My profile</Text>
-          <Text style={styles.heroSubtitle}>Share your contact details with a QR code</Text>
-
-          <View style={styles.avatarWrap}>
+        <LinearGradient
+          colors={['#033A44', '#054653', '#0B7186']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.hero, { paddingTop: insets.top + 28 }]}
+        >
+          <Text style={styles.brandMark}>REC & EXPO</Text>
+          <View style={styles.avatarRing}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
-            {profile ? (
-              <View>
-                <Text style={styles.heroName}>{profile.fullName}</Text>
-                {profile.organization ? (
-                  <Text style={styles.heroOrg}>{profile.organization}</Text>
-                ) : null}
-                {profile.designation ? (
-                  <Text style={styles.heroOrg}>{profile.designation}</Text>
-                ) : null}
-              </View>
-            ) : (
-              <Text style={styles.heroOrg}>Complete your details to get your QR card</Text>
-            )}
           </View>
-        </LinearGradient>
-
-        <View style={styles.sheet}>
           {profile ? (
             <>
-              <View style={styles.qrCard}>
-                <Text style={styles.sectionTitle}>Your QR card</Text>
-                <Text style={styles.sectionHint}>Others can scan this to save your contact</Text>
-                <View style={styles.qrFrame}>
-                  {vCardPayload ? (
-                    <QRCode value={vCardPayload} size={196} backgroundColor="#FFFFFF" color="#054653" />
-                  ) : null}
-                </View>
-                <View style={styles.qrBadge}>
-                  <Ionicons name="qr-code-outline" size={14} color={colors.primaryDark} />
-                  <Text style={styles.qrBadgeText}>Scan to share</Text>
-                </View>
-              </View>
-
-              <View style={styles.detailsCard}>
-                <Text style={styles.sectionTitle}>Contact details</Text>
-                <ContactRow icon="mail-outline" label="Email" value={profile.email} />
-                <ContactRow icon="call-outline" label="Phone" value={profile.phone} />
-                <ContactRow icon="location-outline" label="Address" value={profile.address} />
-                {profile.organization ? (
-                  <ContactRow
-                    icon="business-outline"
-                    label="Organization"
-                    value={profile.organization}
-                  />
-                ) : null}
-                {profile.designation ? (
-                  <ContactRow
-                    icon="ribbon-outline"
-                    label="Designation"
-                    value={profile.designation}
-                  />
-                ) : null}
-              </View>
-
-              <Pressable style={styles.primaryBtn} onPress={() => setEditing(true)}>
-                <Ionicons name="create-outline" size={18} color={colors.white} />
-                <Text style={styles.primaryBtnText}>Edit profile</Text>
-              </Pressable>
-
-              <Pressable style={styles.linkBtn} onPress={clearProfile}>
-                <Text style={styles.linkText}>Clear profile from this phone</Text>
-              </Pressable>
+              <Text style={styles.heroName}>{profile.fullName}</Text>
+              {profile.designation ? (
+                <Text style={styles.heroRole}>{profile.designation}</Text>
+              ) : null}
+              {profile.organization ? (
+                <Text style={styles.heroOrg}>{profile.organization}</Text>
+              ) : null}
             </>
           ) : null}
-        </View>
+        </LinearGradient>
+
+        {profile ? (
+          <View style={styles.body}>
+            <View style={styles.cardPanel}>
+              <Text style={styles.panelEyebrow}>Digital card</Text>
+              <Text style={styles.panelTitle}>Scan to save contact</Text>
+              <View style={styles.qrStage}>
+                {vCardPayload ? (
+                  <QRCode value={vCardPayload} size={180} backgroundColor="#FFFFFF" color="#054653" />
+                ) : null}
+              </View>
+              <Text style={styles.panelHint}>
+                Hold another phone’s camera over this code to share your details.
+              </Text>
+            </View>
+
+            <View style={styles.infoPanel}>
+              <Text style={styles.panelEyebrow}>Details</Text>
+              <DetailLine icon="mail-outline" value={profile.email} />
+              <DetailLine icon="call-outline" value={profile.phone} />
+              <DetailLine icon="location-outline" value={profile.address} />
+              {profile.organization ? (
+                <DetailLine icon="business-outline" value={profile.organization} />
+              ) : null}
+              {profile.designation ? (
+                <DetailLine icon="ribbon-outline" value={profile.designation} />
+              ) : null}
+            </View>
+
+            <Pressable style={styles.editCta} onPress={() => setEditing(true)}>
+              <Text style={styles.editCtaText}>Edit profile</Text>
+              <Ionicons name="pencil" size={16} color={colors.white} />
+            </Pressable>
+
+            <Pressable style={styles.clearBtn} onPress={clearProfile}>
+              <Text style={styles.clearText}>Remove from this phone</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       {!profile ? (
@@ -249,61 +259,78 @@ export default function ProfileScreen() {
           style={styles.editScreen}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={[styles.editHeader, { paddingTop: Platform.OS === 'ios' ? 16 : insets.top + 8 }]}>
-            <Text style={styles.editTitle}>Edit profile</Text>
-            <Pressable onPress={() => setEditing(false)} hitSlop={10}>
-              <Ionicons name="close" size={24} color={colors.text} />
+          <View
+            style={[
+              styles.editHeader,
+              { paddingTop: Platform.OS === 'ios' ? 18 : insets.top + 10 },
+            ]}
+          >
+            <View>
+              <Text style={styles.editEyebrow}>Profile</Text>
+              <Text style={styles.editTitle}>Update your details</Text>
+            </View>
+            <Pressable onPress={() => setEditing(false)} hitSlop={10} style={styles.closeHit}>
+              <Ionicons name="close" size={22} color={colors.text} />
             </Pressable>
           </View>
+
           <ScrollView
-            contentContainerStyle={[styles.editForm, { paddingBottom: Math.max(insets.bottom, 24) }]}
+            contentContainerStyle={[
+              styles.editForm,
+              { paddingBottom: Math.max(insets.bottom, 28) },
+            ]}
             keyboardShouldPersistTaps="handled"
           >
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            <FormField label="Full name" required value={fullName} onChangeText={setFullName} />
-            <FormField
-              label="Email"
-              required
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle" size={16} color={colors.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <SoftField label="Full name" value={fullName} onChangeText={setFullName} />
+            <SoftField
+              label="Work email"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            <FormField
-              label="Phone"
-              required
+            <SoftField
+              label="Mobile number"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
             />
-            <FormField
-              label="Address"
-              required
-              value={address}
-              onChangeText={setAddress}
-              multiline
-            />
-            <FormField
-              label="Organization"
+            <SoftField
+              label="Organisation"
               value={organization}
               onChangeText={setOrganization}
               placeholder="Optional"
             />
-            <FormField
+            <SoftField
               label="Designation"
               value={designation}
               onChangeText={setDesignation}
               placeholder="e.g. Programme Officer"
             />
+            <SoftField
+              label="City / address"
+              value={address}
+              onChangeText={setAddress}
+              multiline
+              style={styles.multiline}
+            />
+
             <Pressable
-              style={[styles.primaryBtn, busy && styles.btnDisabled]}
+              style={[styles.editCta, busy && styles.btnDisabled]}
               disabled={busy}
               onPress={saveProfile}
             >
               {busy ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.primaryBtnText}>Save changes</Text>
+                <Text style={styles.editCtaText}>Save changes</Text>
               )}
             </Pressable>
           </ScrollView>
@@ -320,204 +347,237 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scroll: {
-    paddingBottom: 40,
+    paddingBottom: 48,
   },
   hero: {
-    paddingHorizontal: 24,
-    paddingBottom: 36,
-  },
-  heroKicker: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    color: colors.accent,
-    marginBottom: 8,
-  },
-  heroTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.white,
-  },
-  heroSubtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
-  },
-  avatarWrap: {
-    marginTop: 22,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    paddingHorizontal: 28,
+    paddingBottom: 40,
+  },
+  brandMark: {
+    alignSelf: 'flex-start',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    color: colors.accent,
+    marginBottom: 28,
+  },
+  avatarRing: {
+    padding: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    marginBottom: 16,
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.35)',
   },
   avatarText: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '700',
     color: colors.primaryDark,
+    letterSpacing: 0.5,
   },
   heroName: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '700',
     color: colors.white,
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
-  heroOrg: {
-    marginTop: 2,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-    maxWidth: 240,
-  },
-  sheet: {
-    marginTop: -18,
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  qrCard: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  detailsCard: {
-    backgroundColor: colors.white,
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  sectionTitle: {
-    alignSelf: 'stretch',
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 4,
-  },
-  sectionHint: {
-    alignSelf: 'stretch',
-    fontSize: 13,
-    color: colors.textMuted,
-    marginBottom: 16,
-  },
-  qrFrame: {
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E8EEF2',
-  },
-  qrBadge: {
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: `${colors.accent}22`,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  qrBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primaryDark,
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  contactIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: `${colors.primary}12`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  contactCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  contactLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  contactValue: {
-    marginTop: 2,
+  heroRole: {
+    marginTop: 6,
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text,
+    color: 'rgba(255,255,255,0.92)',
+    textAlign: 'center',
   },
-  primaryBtn: {
+  heroOrg: {
+    marginTop: 4,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+  },
+  body: {
+    marginTop: -20,
+    paddingHorizontal: 20,
+    gap: 14,
+  },
+  cardPanel: {
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 24,
+    alignItems: 'center',
+    shadowColor: '#054653',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  infoPanel: {
+    backgroundColor: colors.white,
+    borderRadius: 24,
+    paddingHorizontal: 22,
+    paddingVertical: 20,
+    gap: 14,
+    shadowColor: '#054653',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  panelEyebrow: {
+    alignSelf: 'stretch',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  panelTitle: {
+    alignSelf: 'stretch',
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.2,
+    marginBottom: 18,
+  },
+  qrStage: {
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 16,
+  },
+  panelHint: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  detailLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  detailValue: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  editCta: {
+    marginTop: 4,
     backgroundColor: colors.primary,
-    borderRadius: 14,
-    minHeight: 50,
+    minHeight: 52,
+    borderRadius: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
     gap: 8,
   },
-  primaryBtnText: {
+  editCtaText: {
     color: colors.white,
-    fontWeight: '800',
     fontSize: 15,
+    fontWeight: '700',
+  },
+  clearBtn: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  clearText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '500',
   },
   btnDisabled: {
     opacity: 0.7,
   },
-  linkBtn: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  linkText: {
-    color: colors.textMuted,
-    fontWeight: '600',
-    fontSize: 13,
-  },
   editScreen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
   },
   editHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
+  editEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
   editTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '700',
     color: colors.text,
+    letterSpacing: -0.3,
+  },
+  closeHit: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editForm: {
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    gap: 20,
   },
-  error: {
-    backgroundColor: '#FEF2F2',
-    color: colors.error,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+  softField: {
+    gap: 6,
+  },
+  softLabel: {
     fontSize: 13,
     fontWeight: '600',
+    color: colors.text,
+  },
+  softInput: {
+    fontSize: 17,
+    lineHeight: 24,
+    color: colors.text,
+    paddingVertical: 10,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#E2E8F0',
+  },
+  softInputFocused: {
+    borderBottomColor: colors.primary,
+  },
+  multiline: {
+    minHeight: 56,
+    textAlignVertical: 'top',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.error,
   },
 });
