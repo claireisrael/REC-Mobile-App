@@ -60,6 +60,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     [
+      'expo-image-picker',
+      {
+        photosPermission: 'Allow REC to access your photos for your profile picture.',
+        cameraPermission: 'Allow REC to use the camera for your profile picture.',
+      },
+    ],
+    [
       'expo-splash-screen',
       {
         image: './assets/images/splash-logo.png',

@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   ImageBackground,
   KeyboardAvoidingView,
@@ -20,6 +22,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { colors } from '@/constants/theme';
 import { useAppData } from '@/context/AppDataContext';
+import { useConnectInbox } from '@/context/ConnectInboxContext';
+import { useProfile } from '@/context/ProfileContext';
 import {
   connectApi,
   type ConnectNotification,
@@ -28,7 +32,8 @@ import {
 } from '@/lib/connect-api';
 import { getHeroImageSource } from '@/lib/hero-image';
 import { registerConnectPushToken } from '@/lib/notifications';
-import { getProfileInitials, loadProfileSession, type NetworkingProfile } from '@/lib/profile-api';
+import { getProfileInitials, loadProfileSession } from '@/lib/profile-api';
+import { routes } from '@/lib/routes';
 
 function statusFor(
   me: string,
@@ -47,8 +52,10 @@ function statusFor(
 
 export default function ConnectScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { conference } = useAppData();
-  const [profile, setProfile] = useState<NetworkingProfile | null>(null);
+  const { profile, hasProfile, ready: profileReady, refresh: refreshProfile } = useProfile();
+  const { pendingIncomingCount, refreshInbox } = useConnectInbox();
   const [people, setPeople] = useState<ConnectPerson[]>([]);
   const [requests, setRequests] = useState<ConnectRequest[]>([]);
   const [notifications, setNotifications] = useState<ConnectNotification[]>([]);
@@ -56,6 +63,7 @@ export default function ConnectScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [noteTarget, setNoteTarget] = useState<ConnectPerson | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
@@ -66,44 +74,46 @@ export default function ConnectScreen() {
   const reload = useCallback(async () => {
     setError('');
     try {
+      await refreshProfile();
       const session = await loadProfileSession();
-      setProfile(session?.profile || null);
-      const email = session?.profile?.email || '';
+      const liveEmail = session?.profile?.email || '';
 
       const [directory, myRequests, notifs] = await Promise.all([
         connectApi.listPeople(),
-        email ? connectApi.listRequestsFor(email) : Promise.resolve([]),
-        email ? connectApi.listNotifications(email) : Promise.resolve([]),
+        liveEmail ? connectApi.listRequestsFor(liveEmail) : Promise.resolve([]),
+        liveEmail ? connectApi.listNotifications(liveEmail) : Promise.resolve([]),
       ]);
       setPeople(directory);
       setRequests(myRequests);
       setNotifications(notifs);
 
-      if (email) {
-        registerConnectPushToken(email).catch(() => undefined);
+      if (liveEmail) {
+        registerConnectPushToken(liveEmail).catch(() => undefined);
       }
+      await refreshInbox();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load Connect');
     }
-  }, []);
+  }, [refreshProfile, refreshInbox]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await reload();
-      if (!cancelled) setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [reload]);
-
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        await reload();
+        if (active) setLoading(false);
+      })();
+      return () => {
+        active = false;
+      };
+    }, [reload])
+  );
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = people.filter((p) => p.email.toLowerCase() !== me.toLowerCase());
     if (!q) return list;
     return list.filter((person) => {
-      const hay = `${person.fullName} ${person.organization || ''} ${person.designation || ''}`.toLowerCase();
+      const hay = `${person.fullName} ${person.organization || ''}`.toLowerCase();
       return hay.includes(q);
     });
   }, [people, search, me]);
@@ -118,8 +128,10 @@ export default function ConnectScreen() {
 
   const sendRequest = async () => {
     if (!profile || !noteTarget) return;
+    const targetName = noteTarget.fullName;
     setBusy(true);
     setError('');
+    setSuccess('');
     try {
       await connectApi.sendConnectionRequest({
         fromEmail: profile.email,
@@ -129,7 +141,12 @@ export default function ConnectScreen() {
       });
       setNote('');
       setNoteTarget(null);
+      setSuccess(`Request sent to ${targetName}. You’ll be notified when they respond.`);
       await reload();
+      Alert.alert(
+        'Request sent',
+        `${targetName} will see your connection request in Connect. You’ll get a notice when they accept or decline.`
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not send request');
     } finally {
@@ -141,7 +158,13 @@ export default function ConnectScreen() {
     if (!profile) return;
     setBusy(true);
     try {
-      await connectApi.respondToRequest(requestId, status, profile.email);
+      await connectApi.respondToRequest(
+        requestId,
+        status,
+        profile.email,
+        profile.fullName
+      );
+      setSuccess(status === 'accepted' ? 'You are now connected.' : 'Request declined.');
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update request');
@@ -156,6 +179,7 @@ export default function ConnectScreen() {
       try {
         await connectApi.markAllNotificationsRead(profile.email);
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        await refreshInbox();
       } catch {
         // ignore
       }
@@ -178,7 +202,6 @@ export default function ConnectScreen() {
         </View>
         <View style={styles.personCopy}>
           <Text style={styles.personName}>{item.fullName}</Text>
-          {item.designation ? <Text style={styles.personMeta}>{item.designation}</Text> : null}
           {item.organization ? <Text style={styles.personMeta}>{item.organization}</Text> : null}
           {item.registrationType ? (
             <Text style={styles.personType}>{item.registrationType}</Text>
@@ -212,15 +235,25 @@ export default function ConnectScreen() {
               <Text style={styles.statusPendingText}>Pending</Text>
             </View>
           ) : declined ? (
-            <Pressable style={styles.connectBtn} onPress={() => setNoteTarget(item)}>
+            <Pressable
+              style={styles.connectBtn}
+              onPress={() => {
+                if (!hasProfile) {
+                  router.navigate(routes.profile);
+                  return;
+                }
+                setNoteTarget(item);
+                setNote('');
+              }}
+            >
               <Text style={styles.connectBtnText}>Retry</Text>
             </Pressable>
           ) : (
             <Pressable
               style={styles.connectBtn}
               onPress={() => {
-                if (!profile) {
-                  setError('Set up your profile first to connect with attendees.');
+                if (!hasProfile) {
+                  router.navigate(routes.profile);
                   return;
                 }
                 setNoteTarget(item);
@@ -268,7 +301,7 @@ export default function ConnectScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Filter by name, org, or designation"
+            placeholder="Filter by name or organisation"
             placeholderTextColor="#9CA3AF"
             style={styles.searchInput}
             autoCapitalize="none"
@@ -283,12 +316,32 @@ export default function ConnectScreen() {
       </ImageBackground>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {success ? (
+        <Pressable style={styles.success} onPress={() => setSuccess('')}>
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+          <Text style={styles.successText}>{success}</Text>
+        </Pressable>
+      ) : null}
 
-      {!profile ? (
-        <View style={styles.banner}>
+      {!hasProfile && profileReady ? (
+        <Pressable style={styles.banner} onPress={() => router.navigate(routes.profile)}>
           <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
-          <Text style={styles.bannerText}>Complete your Profile to send connection requests.</Text>
-        </View>
+          <Text style={styles.bannerText}>
+            Finish your Profile once to unlock connection requests.
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+        </Pressable>
+      ) : null}
+
+      {hasProfile && pendingIncomingCount > 0 ? (
+        <Pressable style={styles.inboxBanner} onPress={openBell}>
+          <Ionicons name="mail-unread-outline" size={18} color={colors.primaryDark} />
+          <Text style={styles.inboxBannerText}>
+            {pendingIncomingCount === 1
+              ? '1 person wants to connect — accept or decline below.'
+              : `${pendingIncomingCount} people want to connect — accept or decline below.`}
+          </Text>
+        </Pressable>
       ) : null}
 
       {loading ? (
@@ -460,6 +513,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  success: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: `${colors.success}14`,
+    borderRadius: 10,
+    padding: 12,
+  },
+  successText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.success,
+    fontWeight: '600',
+  },
   banner: {
     marginHorizontal: 16,
     marginTop: 10,
@@ -475,6 +544,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primaryDark,
     fontWeight: '600',
+  },
+  inboxBanner: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: `${colors.accent}33`,
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+  },
+  inboxBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.primaryDark,
+    fontWeight: '700',
   },
   centered: {
     flex: 1,

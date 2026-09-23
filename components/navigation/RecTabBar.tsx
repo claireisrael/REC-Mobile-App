@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
+import { useConnectInbox } from '@/context/ConnectInboxContext';
 import { tabHref } from '@/lib/routes';
 
 type RecTabBarProps = {
@@ -50,6 +51,7 @@ const TAB_CONFIG: TabConfig[] = [
 export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { badgeCount } = useConnectInbox();
 
   return (
     <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 10) }]}>
@@ -82,6 +84,7 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
 
           const iconName = isFocused ? config.iconFocused : config.icon;
           const label = options.title ?? config.label;
+          const showConnectBadge = config.accent && badgeCount > 0;
 
           if (config.accent) {
             return (
@@ -89,7 +92,11 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
                 key={route.key}
                 accessibilityRole="button"
                 accessibilityState={isFocused ? { selected: true } : {}}
-                accessibilityLabel={options.tabBarAccessibilityLabel}
+                accessibilityLabel={
+                  showConnectBadge
+                    ? `Connect, ${badgeCount} new`
+                    : options.tabBarAccessibilityLabel
+                }
                 onPress={onPress}
                 onLongPress={onLongPress}
                 style={styles.tab}
@@ -100,6 +107,13 @@ export function RecTabBar({ state, descriptors, navigation }: RecTabBarProps) {
                     size={22}
                     color={isFocused ? colors.text : colors.primaryDark}
                   />
+                  {showConnectBadge ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {badgeCount > 9 ? '9+' : badgeCount}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
                 <Text style={[styles.label, isFocused && styles.labelFocused]}>{label}</Text>
               </Pressable>
@@ -187,5 +201,24 @@ const styles = StyleSheet.create({
   connectPillFocused: {
     backgroundColor: colors.accent,
     borderColor: colors.accentDark,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.white,
   },
 });

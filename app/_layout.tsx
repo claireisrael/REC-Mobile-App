@@ -6,6 +6,8 @@ import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppDataProvider } from '@/context/AppDataContext';
+import { ConnectInboxProvider } from '@/context/ConnectInboxContext';
+import { ProfileProvider } from '@/context/ProfileContext';
 import { RecChatbotHost } from '@/components/chatbot/RecChatbotHost';
 import { ProfileSetupHost } from '@/components/profile/ProfileSetupHost';
 import { colors } from '@/constants/theme';
@@ -32,14 +34,18 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppDataProvider>
-        <View style={styles.root}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="rec-actions" options={{ presentation: 'card' }} />
-          </Stack>
-          <ProfileSetupHost />
-          <RecChatbotHost />
-        </View>
+        <ProfileProvider>
+          <ConnectInboxProvider>
+            <View style={styles.root}>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="rec-actions" options={{ presentation: 'card' }} />
+              </Stack>
+              <ProfileSetupHost />
+              <RecChatbotHost />
+            </View>
+          </ConnectInboxProvider>
+        </ProfileProvider>
       </AppDataProvider>
     </SafeAreaProvider>
   );

@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import { connectApi } from '@/lib/connect-api';
 
 const STORAGE_KEY = 'rec.networkingProfile.v1';
+const PHOTO_FILENAME = 'rec-profile-photo.jpg';
 
 export type NetworkingProfile = {
   id?: string | null;
@@ -11,7 +13,8 @@ export type NetworkingProfile = {
   phone: string;
   address: string;
   organization?: string;
-  designation?: string;
+  /** Local file URI for profile photo on this device */
+  photoUri?: string | null;
   updatedAt?: string | null;
 };
 
@@ -32,14 +35,13 @@ function validateProfile(fields: {
   phone: string;
   address: string;
   organization?: string;
-  designation?: string;
+  photoUri?: string | null;
 }): NetworkingProfile {
   const fullName = String(fields.fullName || '').trim();
   const email = normalizeEmail(fields.email);
   const phone = String(fields.phone || '').trim();
   const address = String(fields.address || '').trim();
   const organization = String(fields.organization || '').trim();
-  const designation = String(fields.designation || '').trim();
 
   if (!email || !email.includes('@')) {
     throw new Error('A valid email is required');
@@ -55,30 +57,50 @@ function validateProfile(fields: {
     phone,
     address,
     organization: organization || undefined,
-    designation: designation || undefined,
+    photoUri: fields.photoUri || null,
     updatedAt: new Date().toISOString(),
   };
 }
 
+export function isProfileComplete(profile: NetworkingProfile | null | undefined): boolean {
+  if (!profile) return false;
+  return Boolean(
+    String(profile.fullName || '').trim() &&
+      String(profile.email || '').trim() &&
+      String(profile.phone || '').trim() &&
+      String(profile.address || '').trim()
+  );
+}
+
 export async function loadProfileSession(): Promise<ProfileSession | null> {
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as ProfileSession & { profileToken?: string };
-    if (!parsed?.email || !parsed?.profile?.fullName) return null;
-    return {
-      email: parsed.email,
-      profile: parsed.profile,
-    };
-  } catch {
-    return null;
-  }
+  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+  const parsed = JSON.parse(raw) as ProfileSession & { profileToken?: string };
+  if (!parsed?.email || !parsed?.profile?.fullName) return null;
+  return {
+    email: parsed.email,
+    profile: parsed.profile,
+  };
 }
 
 export async function hasCompleteProfile(): Promise<boolean> {
-  const session = await loadProfileSession();
-  const p = session?.profile;
-  return Boolean(p?.fullName && p?.email && p?.phone && p?.address);
+  try {
+    const session = await loadProfileSession();
+    return isProfileComplete(session?.profile);
+  } catch {
+    return false;
+  }
+}
+
+function syncDirectory(profile: NetworkingProfile) {
+  // Fire-and-forget — must never block local save / UI completion.
+  void connectApi
+    .upsertPerson({
+      email: profile.email,
+      fullName: profile.fullName,
+      organization: profile.organization,
+    })
+    .catch(() => undefined);
 }
 
 export async function saveProfileSession(session: ProfileSession): Promise<void> {
@@ -89,22 +111,29 @@ export async function saveProfileSession(session: ProfileSession): Promise<void>
       profile: session.profile,
     })
   );
-
-  // Best-effort: publish name/org/designation into Connect directory (Appwrite).
-  try {
-    await connectApi.upsertPerson({
-      email: session.profile.email,
-      fullName: session.profile.fullName,
-      organization: session.profile.organization,
-      designation: session.profile.designation,
-    });
-  } catch {
-    // Local profile remains valid even if directory sync fails.
-  }
+  syncDirectory(session.profile);
 }
 
 export async function clearProfileSession(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY);
+  try {
+    const base = FileSystem.documentDirectory;
+    if (!base) return;
+    const path = `${base}${PHOTO_FILENAME}`;
+    const info = await FileSystem.getInfoAsync(path);
+    if (info.exists) await FileSystem.deleteAsync(path, { idempotent: true });
+  } catch {
+    // ignore
+  }
+}
+
+/** Persist a picked image into app documents and return a stable local URI. */
+export async function persistProfilePhoto(sourceUri: string): Promise<string> {
+  const base = FileSystem.documentDirectory;
+  if (!base) throw new Error('Storage unavailable');
+  const dest = `${base}${PHOTO_FILENAME}`;
+  await FileSystem.copyAsync({ from: sourceUri, to: dest });
+  return `${dest}?t=${Date.now()}`;
 }
 
 /** Mobile-only: create/update profile on this device (no web API). */
@@ -114,7 +143,7 @@ export function saveLocalProfile(fields: {
   phone: string;
   address: string;
   organization?: string;
-  designation?: string;
+  photoUri?: string | null;
 }): ProfileSession {
   const profile = validateProfile(fields);
   return { email: profile.email, profile };
@@ -137,7 +166,6 @@ export function buildVCard(profile: {
   phone: string;
   address: string;
   organization?: string;
-  designation?: string;
 }) {
   const escape = (value: string) =>
     String(value || '')
@@ -151,7 +179,6 @@ export function buildVCard(profile: {
     'VERSION:3.0',
     `FN:${escape(profile.fullName)}`,
     profile.organization ? `ORG:${escape(profile.organization)}` : null,
-    profile.designation ? `TITLE:${escape(profile.designation)}` : null,
     `TEL;TYPE=CELL:${escape(profile.phone)}`,
     `EMAIL:${escape(profile.email)}`,
     `ADR;TYPE=HOME:;;${escape(profile.address)};;;;`,

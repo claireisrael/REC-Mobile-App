@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
+  Dimensions,
+  Keyboard,
   Modal,
   Platform,
   Pressable,
@@ -16,8 +17,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ProfileAvatarPicker } from '@/components/profile/ProfileAvatarPicker';
 import { colors } from '@/constants/theme';
-import { saveLocalProfile, saveProfileSession, type NetworkingProfile } from '@/lib/profile-api';
+import { useProfile } from '@/context/ProfileContext';
+import type { NetworkingProfile } from '@/lib/profile-api';
 
 type ProfileSetupModalProps = {
   visible: boolean;
@@ -26,11 +29,15 @@ type ProfileSetupModalProps = {
 
 type Step = 0 | 1 | 2;
 
+const FOOTER_CTA = 54;
+const FOOTER_TOP_PAD = 12;
+
 function SoftField({
   label,
   hint,
+  onFocused,
   ...props
-}: TextInputProps & { label: string; hint?: string }) {
+}: TextInputProps & { label: string; hint?: string; onFocused?: () => void }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.field}>
@@ -41,6 +48,8 @@ function SoftField({
         onFocus={(e) => {
           setFocused(true);
           props.onFocus?.(e);
+          // Wait for keyboard animation before scrolling the field into view.
+          setTimeout(() => onFocused?.(), Platform.OS === 'ios' ? 80 : 120);
         }}
         onBlur={(e) => {
           setFocused(false);
@@ -55,21 +64,68 @@ function SoftField({
 
 export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProps) {
   const insets = useSafeAreaInsets();
+  const { saveProfile } = useProfile();
+  const scrollRef = useRef<ScrollView>(null);
+  const fieldOffsets = useRef<Record<string, number>>({});
   const [step, setStep] = useState<Step>(0);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [organization, setOrganization] = useState('');
-  const [designation, setDesignation] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // KeyboardAvoidingView is unreliable inside Android Modals — pin with keyboard height.
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+      return;
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, (event) => {
+      const { height, screenY } = event.endCoordinates;
+      let next = Math.max(0, Math.round(height ?? 0));
+
+      if (Platform.OS === 'android' && typeof screenY === 'number') {
+        const windowH = Dimensions.get('window').height;
+        const overlap = Math.max(0, Math.round(windowH - screenY));
+        next = overlap > 0 ? overlap : next;
+      }
+
+      setKeyboardHeight(next);
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, [visible]);
+
+  const scrollFieldIntoView = (key: string) => {
+    const y = fieldOffsets.current[key];
+    if (typeof y !== 'number') return;
+    scrollRef.current?.scrollTo({
+      y: Math.max(0, y - 24),
+      animated: true,
+    });
+  };
+
+  const rememberFieldOffset = (key: string) => (event: { nativeEvent: { layout: { y: number } } }) => {
+    fieldOffsets.current[key] = event.nativeEvent.layout.y;
+  };
 
   const stepMeta = useMemo(
     () =>
       [
         {
-          title: 'Welcome to REC',
+          title: 'Welcome to REC26',
           subtitle: 'A few details create your shareable contact card for the conference floor.',
         },
         {
@@ -78,7 +134,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
         },
         {
           title: 'Your professional identity',
-          subtitle: 'Help attendees recognise you by organisation and role.',
+          subtitle: 'Add your photo and organisation so attendees recognise you.',
         },
       ] as const,
     []
@@ -112,6 +168,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
 
   const goBack = () => {
     setError('');
+    Keyboard.dismiss();
     if (step === 0) return;
     setStep((s) => (s - 1) as Step);
   };
@@ -125,16 +182,15 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
     setError('');
     setBusy(true);
     try {
-      const session = saveLocalProfile({
+      const profile = await saveProfile({
         fullName,
         email,
         phone,
         address,
         organization,
-        designation,
+        photoUri,
       });
-      await saveProfileSession(session);
-      onComplete(session.profile);
+      onComplete(profile);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save profile');
     } finally {
@@ -143,15 +199,29 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
   };
 
   const meta = stepMeta[step];
+  const keyboardOpen = keyboardHeight > 0;
+  const footerPadBottom = keyboardOpen ? 10 : Math.max(insets.bottom, 16);
+  const footerReserve = FOOTER_TOP_PAD + FOOTER_CTA + footerPadBottom + 12;
 
   return (
-    <Modal visible={visible} animationType="fade" presentationStyle="fullScreen">
+    <Modal
+      visible={visible}
+      animationType="fade"
+      presentationStyle="fullScreen"
+      statusBarTranslucent={Platform.OS === 'android'}
+    >
       <View style={styles.root}>
         <LinearGradient
           colors={['#033A44', '#054653', '#0B7186']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[styles.top, { paddingTop: insets.top + 20 }]}
+          style={[
+            styles.top,
+            {
+              paddingTop: insets.top + (keyboardOpen ? 10 : 20),
+              paddingBottom: keyboardOpen ? 14 : 32,
+            },
+          ]}
         >
           <View style={styles.progressRow}>
             {[0, 1, 2].map((i) => (
@@ -171,21 +241,25 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
             <Text style={styles.brandMark}>REC & EXPO</Text>
           )}
 
-          <Text style={styles.heroTitle}>{meta.title}</Text>
-          <Text style={styles.heroSubtitle}>{meta.subtitle}</Text>
+          <Text style={[styles.heroTitle, keyboardOpen && styles.heroTitleCompact]}>
+            {meta.title}
+          </Text>
+          {!keyboardOpen ? <Text style={styles.heroSubtitle}>{meta.subtitle}</Text> : null}
         </LinearGradient>
 
-        <KeyboardAvoidingView
-          style={styles.sheet}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <View style={styles.sheet}>
           <ScrollView
+            ref={scrollRef}
             contentContainerStyle={[
               styles.sheetContent,
-              { paddingBottom: Math.max(insets.bottom, 20) + 88 },
+              step === 0
+                ? { paddingBottom: Math.max(insets.bottom, 24) }
+                : { paddingBottom: footerReserve + keyboardHeight },
             ]}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets={false}
           >
             {error ? (
               <View style={styles.errorBanner}>
@@ -214,7 +288,7 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
                   <View style={styles.featureCopy}>
                     <Text style={styles.featureTitle}>Connect with attendees</Text>
                     <Text style={styles.featureBody}>
-                      Appear in Connect with your name, organisation, and designation.
+                      Appear in Connect with your name and organisation.
                     </Text>
                   </View>
                 </View>
@@ -229,86 +303,120 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
                     </Text>
                   </View>
                 </View>
+
+                <Pressable style={[styles.cta, styles.welcomeCta]} onPress={goNext}>
+                  <Text style={styles.ctaText}>Get started</Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.white} />
+                </Pressable>
               </View>
             ) : null}
 
             {step === 1 ? (
               <View style={styles.fields}>
-                <SoftField
-                  label="Full name"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  placeholder="As you’d like it on your card"
-                  autoComplete="name"
-                  autoCapitalize="words"
-                />
-                <SoftField
-                  label="Work email"
-                  hint="Used to match connection requests"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="name@organisation.org"
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                />
-                <SoftField
-                  label="Mobile number"
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="+256 …"
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                />
+                <View onLayout={rememberFieldOffset('fullName')}>
+                  <SoftField
+                    label="Full name"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="As you’d like it on your card"
+                    autoComplete="name"
+                    autoCapitalize="words"
+                    onFocused={() => scrollFieldIntoView('fullName')}
+                  />
+                </View>
+                <View onLayout={rememberFieldOffset('email')}>
+                  <SoftField
+                    label="Work email"
+                    hint="Used to match connection requests"
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="name@organisation.org"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    onFocused={() => scrollFieldIntoView('email')}
+                  />
+                </View>
+                <View onLayout={rememberFieldOffset('phone')}>
+                  <SoftField
+                    label="Mobile number"
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="+256 …"
+                    keyboardType="phone-pad"
+                    autoComplete="tel"
+                    onFocused={() => scrollFieldIntoView('phone')}
+                  />
+                </View>
               </View>
             ) : null}
 
             {step === 2 ? (
               <View style={styles.fields}>
-                <SoftField
-                  label="Organisation"
-                  value={organization}
-                  onChangeText={setOrganization}
-                  placeholder="Company, ministry, or institution"
+                <ProfileAvatarPicker
+                  fullName={fullName}
+                  photoUri={photoUri}
+                  onChange={setPhotoUri}
+                  size={keyboardOpen ? 72 : 100}
                 />
-                <SoftField
-                  label="Designation"
-                  value={designation}
-                  onChangeText={setDesignation}
-                  placeholder="e.g. Programme Officer"
-                />
-                <SoftField
-                  label="City / address"
-                  value={address}
-                  onChangeText={setAddress}
-                  placeholder="Kampala, Uganda"
-                  multiline
-                  style={styles.multiline}
-                />
+                <View onLayout={rememberFieldOffset('organization')}>
+                  <SoftField
+                    label="Organisation"
+                    value={organization}
+                    onChangeText={setOrganization}
+                    placeholder="Company, ministry, or institution"
+                    onFocused={() => scrollFieldIntoView('organization')}
+                  />
+                </View>
+                <View onLayout={rememberFieldOffset('address')}>
+                  <SoftField
+                    label="City / address"
+                    value={address}
+                    onChangeText={setAddress}
+                    placeholder="Kampala, Uganda"
+                    multiline
+                    style={styles.multiline}
+                    onFocused={() => scrollFieldIntoView('address')}
+                  />
+                </View>
               </View>
             ) : null}
           </ScrollView>
 
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-            {step < 2 ? (
-              <Pressable style={styles.cta} onPress={goNext}>
-                <Text style={styles.ctaText}>{step === 0 ? 'Get started' : 'Continue'}</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.white} />
-              </Pressable>
-            ) : (
-              <Pressable style={[styles.cta, busy && styles.ctaDisabled]} disabled={busy} onPress={submit}>
-                {busy ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <>
-                    <Text style={styles.ctaText}>Create my profile</Text>
-                    <Ionicons name="checkmark" size={18} color={colors.white} />
-                  </>
-                )}
-              </Pressable>
-            )}
-          </View>
-        </KeyboardAvoidingView>
+          {step > 0 ? (
+            <View
+              style={[
+                styles.footer,
+                {
+                  bottom: keyboardHeight,
+                  paddingBottom: footerPadBottom,
+                },
+              ]}
+            >
+              {step === 1 ? (
+                <Pressable style={styles.cta} onPress={goNext}>
+                  <Text style={styles.ctaText}>Continue</Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.white} />
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={[styles.cta, busy && styles.ctaDisabled]}
+                  disabled={busy}
+                  onPress={submit}
+                >
+                  {busy ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <>
+                      <Text style={styles.ctaText}>Create my profile</Text>
+                      <Ionicons name="checkmark" size={18} color={colors.white} />
+                    </>
+                  )}
+                </Pressable>
+              )}
+            </View>
+          ) : null}
+        </View>
       </View>
     </Modal>
   );
@@ -321,7 +429,6 @@ const styles = StyleSheet.create({
   },
   top: {
     paddingHorizontal: 28,
-    paddingBottom: 32,
   },
   progressRow: {
     flexDirection: 'row',
@@ -364,6 +471,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     marginBottom: 10,
   },
+  heroTitleCompact: {
+    fontSize: 22,
+    lineHeight: 28,
+    marginBottom: 0,
+  },
   heroSubtitle: {
     fontSize: 15,
     lineHeight: 23,
@@ -383,7 +495,10 @@ const styles = StyleSheet.create({
     paddingTop: 28,
   },
   welcomeBlock: {
-    gap: 20,
+    gap: 18,
+  },
+  welcomeCta: {
+    marginTop: 10,
   },
   featureRow: {
     flexDirection: 'row',
@@ -466,16 +581,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
     paddingHorizontal: 28,
-    paddingTop: 12,
+    paddingTop: FOOTER_TOP_PAD,
     backgroundColor: 'rgba(255,255,255,0.96)',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   cta: {
     backgroundColor: colors.primary,
-    minHeight: 54,
+    minHeight: FOOTER_CTA,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',

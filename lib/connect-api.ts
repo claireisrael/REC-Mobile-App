@@ -95,7 +95,7 @@ export const connectApi = {
     const q = search.trim().toLowerCase();
     if (!q) return people;
     return people.filter((person) => {
-      const hay = `${person.fullName} ${person.organization || ''} ${person.designation || ''}`.toLowerCase();
+      const hay = `${person.fullName} ${person.organization || ''}`.toLowerCase();
       return hay.includes(q);
     });
   },
@@ -104,7 +104,6 @@ export const connectApi = {
     email: string;
     fullName: string;
     organization?: string;
-    designation?: string;
   }): Promise<ConnectPerson> {
     const email = normalizeEmail(fields.email);
     const existing = await listDocuments<ConnectPerson>(peopleId(), [
@@ -115,7 +114,6 @@ export const connectApi = {
       email,
       fullName: fields.fullName.trim(),
       organization: fields.organization?.trim() || null,
-      designation: fields.designation?.trim() || null,
     };
     if (existing[0]) {
       return updateDocument<ConnectPerson>(peopleId(), existing[0].$id, data);
@@ -204,7 +202,8 @@ export const connectApi = {
   async respondToRequest(
     requestId: string,
     status: 'accepted' | 'declined',
-    actorEmail: string
+    actorEmail: string,
+    actorName?: string
   ): Promise<ConnectRequest> {
     const me = normalizeEmail(actorEmail);
     const docs = await listDocuments<ConnectRequest>(requestsId(), [
@@ -216,11 +215,12 @@ export const connectApi = {
 
     const updated = await updateDocument<ConnectRequest>(requestsId(), requestId, { status });
 
+    const who = (actorName || '').trim() || 'Someone';
     const title = status === 'accepted' ? 'Connection accepted' : 'Connection declined';
     const body =
       status === 'accepted'
-        ? `${me} accepted your connection request`
-        : `${me} declined your connection request`;
+        ? `${who} accepted your connection request`
+        : `${who} declined your connection request`;
 
     await createDocument(notificationsId(), {
       toEmail: target.fromEmail,

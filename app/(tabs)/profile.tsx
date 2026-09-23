@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ImageBackground,
   KeyboardAvoidingView,
   Modal,
@@ -19,19 +20,13 @@ import QRCode from 'react-native-qrcode-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
+import { ProfileAvatarPicker } from '@/components/profile/ProfileAvatarPicker';
 import { ProfileSetupModal } from '@/components/profile/ProfileSetupModal';
 import { colors } from '@/constants/theme';
 import { useAppData } from '@/context/AppDataContext';
+import { useProfile } from '@/context/ProfileContext';
 import { getHeroImageSource } from '@/lib/hero-image';
-import {
-  buildVCard,
-  clearProfileSession,
-  getProfileInitials,
-  loadProfileSession,
-  saveLocalProfile,
-  saveProfileSession,
-  type NetworkingProfile,
-} from '@/lib/profile-api';
+import { buildVCard, getProfileInitials } from '@/lib/profile-api';
 
 function SoftField({
   label,
@@ -78,60 +73,39 @@ function DetailLine({
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { conference } = useAppData();
+  const { profile, ready, hasProfile, saveProfile, clearProfile } = useProfile();
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [organization, setOrganization] = useState('');
-  const [designation, setDesignation] = useState('');
-  const [profile, setProfile] = useState<NetworkingProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
 
-  const applyProfile = useCallback((next: NetworkingProfile) => {
-    setProfile(next);
-    setEmail(next.email);
-    setFullName(next.fullName || '');
-    setPhone(next.phone || '');
-    setAddress(next.address || '');
-    setOrganization(next.organization || '');
-    setDesignation(next.designation || '');
-  }, []);
-
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const session = await loadProfileSession();
-        if (cancelled) return;
-        if (session?.profile?.fullName) {
-          applyProfile(session.profile);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [applyProfile]);
+    if (!profile) return;
+    setEmail(profile.email);
+    setFullName(profile.fullName || '');
+    setPhone(profile.phone || '');
+    setAddress(profile.address || '');
+    setOrganization(profile.organization || '');
+    setPhotoUri(profile.photoUri || null);
+  }, [profile]);
 
-  const saveProfile = async () => {
+  const saveEdits = async () => {
     setError('');
     setBusy(true);
     try {
-      const session = saveLocalProfile({
+      await saveProfile({
         fullName: fullName.trim(),
         email: email.trim(),
         phone: phone.trim(),
         address: address.trim(),
         organization: organization.trim(),
-        designation: designation.trim(),
+        photoUri,
       });
-      await saveProfileSession(session);
-      applyProfile(session.profile);
       setEditing(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save profile');
@@ -140,20 +114,19 @@ export default function ProfileScreen() {
     }
   };
 
-  const clearProfile = async () => {
-    await clearProfileSession();
-    setProfile(null);
+  const onClear = async () => {
+    await clearProfile();
     setEmail('');
     setFullName('');
     setPhone('');
     setAddress('');
     setOrganization('');
-    setDesignation('');
+    setPhotoUri(null);
     setEditing(false);
     setError('');
   };
 
-  if (loading) {
+  if (!ready) {
     return (
       <ScreenContainer>
         <View style={styles.centered}>
@@ -170,7 +143,6 @@ export default function ProfileScreen() {
         phone: profile.phone,
         address: profile.address,
         organization: profile.organization,
-        designation: profile.designation,
       })
     : '';
 
@@ -194,16 +166,17 @@ export default function ProfileScreen() {
           />
           <Text style={styles.brandMark}>REC & EXPO</Text>
           <View style={styles.avatarRing}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
+            {profile?.photoUri ? (
+              <Image source={{ uri: profile.photoUri }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
           </View>
           {profile ? (
             <>
               <Text style={styles.heroName}>{profile.fullName}</Text>
-              {profile.designation ? (
-                <Text style={styles.heroRole}>{profile.designation}</Text>
-              ) : null}
               {profile.organization ? (
                 <Text style={styles.heroOrg}>{profile.organization}</Text>
               ) : null}
@@ -234,9 +207,6 @@ export default function ProfileScreen() {
               {profile.organization ? (
                 <DetailLine icon="business-outline" value={profile.organization} />
               ) : null}
-              {profile.designation ? (
-                <DetailLine icon="ribbon-outline" value={profile.designation} />
-              ) : null}
             </View>
 
             <Pressable style={styles.editCta} onPress={() => setEditing(true)}>
@@ -244,19 +214,27 @@ export default function ProfileScreen() {
               <Ionicons name="pencil" size={16} color={colors.white} />
             </Pressable>
 
-            <Pressable style={styles.clearBtn} onPress={clearProfile}>
+            <Pressable style={styles.clearBtn} onPress={onClear}>
               <Text style={styles.clearText}>Remove from this phone</Text>
             </Pressable>
           </View>
         ) : null}
       </ScrollView>
 
-      {!profile ? (
+      {!hasProfile ? (
         <ProfileSetupModal
-          visible={!loading}
-          onComplete={(next) => {
-            applyProfile(next);
+          visible={ready}
+          onComplete={(saved) => {
+            // saveProfile already updated context + AsyncStorage — do not refresh
+            // immediately (a failed/empty re-read would wipe the new profile).
+            setEmail(saved.email);
+            setFullName(saved.fullName);
+            setPhone(saved.phone);
+            setAddress(saved.address);
+            setOrganization(saved.organization || '');
+            setPhotoUri(saved.photoUri || null);
             setEditing(false);
+            setError('');
           }}
         />
       ) : null}
@@ -295,6 +273,13 @@ export default function ProfileScreen() {
               </View>
             ) : null}
 
+            <ProfileAvatarPicker
+              fullName={fullName}
+              photoUri={photoUri}
+              onChange={setPhotoUri}
+              size={96}
+            />
+
             <SoftField label="Full name" value={fullName} onChangeText={setFullName} />
             <SoftField
               label="Work email"
@@ -316,12 +301,6 @@ export default function ProfileScreen() {
               placeholder="Optional"
             />
             <SoftField
-              label="Designation"
-              value={designation}
-              onChangeText={setDesignation}
-              placeholder="e.g. Programme Officer"
-            />
-            <SoftField
               label="City / address"
               value={address}
               onChangeText={setAddress}
@@ -332,7 +311,7 @@ export default function ProfileScreen() {
             <Pressable
               style={[styles.editCta, busy && styles.btnDisabled]}
               disabled={busy}
-              onPress={saveProfile}
+              onPress={saveEdits}
             >
               {busy ? (
                 <ActivityIndicator color={colors.white} />
@@ -380,6 +359,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
     marginBottom: 16,
+    overflow: 'hidden',
   },
   avatar: {
     width: 84,
@@ -388,6 +368,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
   },
   avatarText: {
     fontSize: 28,
@@ -402,15 +387,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.3,
   },
-  heroRole: {
-    marginTop: 6,
-    fontSize: 15,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.92)',
-    textAlign: 'center',
-  },
   heroOrg: {
-    marginTop: 4,
+    marginTop: 6,
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
