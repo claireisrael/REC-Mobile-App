@@ -96,7 +96,6 @@ export default function HomeScreen() {
   }
 
   const heroTitle = conference.title || conference.shortName || 'Renewable Energy Conference & Expo';
-  const heroBackground = getHeroImageSource(conference.heroImageUrl);
   const dateRange = formatDateRange(conference.startDate, conference.endDate);
 
   const heroContent = (
