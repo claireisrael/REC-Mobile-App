@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,11 +10,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TextInputProps,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FormField } from '@/components/ui/FormField';
 import { colors } from '@/constants/theme';
 import { saveLocalProfile, saveProfileSession, type NetworkingProfile } from '@/lib/profile-api';
 
@@ -22,8 +24,38 @@ type ProfileSetupModalProps = {
   onComplete: (profile: NetworkingProfile) => void;
 };
 
+type Step = 0 | 1 | 2;
+
+function SoftField({
+  label,
+  hint,
+  ...props
+}: TextInputProps & { label: string; hint?: string }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      <TextInput
+        {...props}
+        onFocus={(e) => {
+          setFocused(true);
+          props.onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          props.onBlur?.(e);
+        }}
+        placeholderTextColor="#94A3B8"
+        style={[styles.fieldInput, focused && styles.fieldInputFocused, props.style]}
+      />
+    </View>
+  );
+}
+
 export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProps) {
   const insets = useSafeAreaInsets();
+  const [step, setStep] = useState<Step>(0);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -33,7 +65,63 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  const stepMeta = useMemo(
+    () =>
+      [
+        {
+          title: 'Welcome to REC',
+          subtitle: 'A few details create your shareable contact card for the conference floor.',
+        },
+        {
+          title: 'How should people reach you?',
+          subtitle: 'This stays on your phone. You can change it anytime from Profile.',
+        },
+        {
+          title: 'Your professional identity',
+          subtitle: 'Help attendees recognise you by organisation and role.',
+        },
+      ] as const,
+    []
+  );
+
+  const validateStep = (current: Step): string | null => {
+    if (current === 1) {
+      if (!fullName.trim()) return 'Please enter your full name.';
+      if (!email.trim() || !email.includes('@')) return 'Please enter a valid email.';
+      if (!phone.trim()) return 'Please enter a phone number.';
+    }
+    if (current === 2) {
+      if (!address.trim()) return 'Please add a city or address.';
+    }
+    return null;
+  };
+
+  const goNext = () => {
+    setError('');
+    if (step === 0) {
+      setStep(1);
+      return;
+    }
+    const problem = validateStep(step);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    if (step === 1) setStep(2);
+  };
+
+  const goBack = () => {
+    setError('');
+    if (step === 0) return;
+    setStep((s) => (s - 1) as Step);
+  };
+
   const submit = async () => {
+    const problem = validateStep(2);
+    if (problem) {
+      setError(problem);
+      return;
+    }
     setError('');
     setBusy(true);
     try {
@@ -54,164 +142,353 @@ export function ProfileSetupModal({ visible, onComplete }: ProfileSetupModalProp
     }
   };
 
+  const meta = stepMeta[step];
+
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
-      <LinearGradient colors={['#054653', '#0B7186', '#0E8A9E']} style={styles.hero}>
-        <View style={{ height: insets.top }} />
-        <Text style={styles.kicker}>REC & EXPO</Text>
-        <Text style={styles.title}>Set up your profile</Text>
-        <Text style={styles.subtitle}>
-          Create your digital contact card so you can share it with others at the conference.
-        </Text>
-      </LinearGradient>
-
-      <KeyboardAvoidingView
-        style={styles.body}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={[styles.form, { paddingBottom: Math.max(insets.bottom, 24) }]}
-          keyboardShouldPersistTaps="handled"
+    <Modal visible={visible} animationType="fade" presentationStyle="fullScreen">
+      <View style={styles.root}>
+        <LinearGradient
+          colors={['#033A44', '#054653', '#0B7186']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.top, { paddingTop: insets.top + 20 }]}
         >
-          <Text style={styles.formTitle}>Your details</Text>
-          <Text style={styles.formHint}>Saved on this phone only. You can edit anytime.</Text>
+          <View style={styles.progressRow}>
+            {[0, 1, 2].map((i) => (
+              <View
+                key={i}
+                style={[styles.progressSeg, i <= step && styles.progressSegActive]}
+              />
+            ))}
+          </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {step > 0 ? (
+            <Pressable onPress={goBack} style={styles.backBtn} hitSlop={12}>
+              <Ionicons name="arrow-back" size={20} color="rgba(255,255,255,0.9)" />
+              <Text style={styles.backText}>Back</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.brandMark}>REC & EXPO</Text>
+          )}
 
-          <FormField
-            label="Full name"
-            required
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="e.g. Amina Okello"
-            autoComplete="name"
-          />
-          <FormField
-            label="Email"
-            required
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
-          <FormField
-            label="Phone"
-            required
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            placeholder="+256 7XX XXX XXX"
-            autoComplete="tel"
-          />
-          <FormField
-            label="Address"
-            required
-            value={address}
-            onChangeText={setAddress}
-            placeholder="City, country"
-            multiline
-          />
-          <FormField
-            label="Organization"
-            value={organization}
-            onChangeText={setOrganization}
-            placeholder="Optional"
-          />
-          <FormField
-            label="Designation"
-            value={designation}
-            onChangeText={setDesignation}
-            placeholder="e.g. Programme Officer"
-          />
+          <Text style={styles.heroTitle}>{meta.title}</Text>
+          <Text style={styles.heroSubtitle}>{meta.subtitle}</Text>
+        </LinearGradient>
 
-          <Pressable
-            style={[styles.primaryBtn, busy && styles.btnDisabled]}
-            disabled={busy}
-            onPress={submit}
+        <KeyboardAvoidingView
+          style={styles.sheet}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={[
+              styles.sheetContent,
+              { paddingBottom: Math.max(insets.bottom, 20) + 88 },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {busy ? (
-              <ActivityIndicator color={colors.white} />
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle" size={16} color={colors.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            {step === 0 ? (
+              <View style={styles.welcomeBlock}>
+                <View style={styles.featureRow}>
+                  <View style={styles.featureIcon}>
+                    <Ionicons name="qr-code-outline" size={22} color={colors.primary} />
+                  </View>
+                  <View style={styles.featureCopy}>
+                    <Text style={styles.featureTitle}>Share with a QR code</Text>
+                    <Text style={styles.featureBody}>
+                      Others scan your card to save your contact instantly.
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.featureRow}>
+                  <View style={styles.featureIcon}>
+                    <Ionicons name="people-outline" size={22} color={colors.primary} />
+                  </View>
+                  <View style={styles.featureCopy}>
+                    <Text style={styles.featureTitle}>Connect with attendees</Text>
+                    <Text style={styles.featureBody}>
+                      Appear in Connect with your name, organisation, and designation.
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.featureRow}>
+                  <View style={styles.featureIcon}>
+                    <Ionicons name="shield-checkmark-outline" size={22} color={colors.primary} />
+                  </View>
+                  <View style={styles.featureCopy}>
+                    <Text style={styles.featureTitle}>Private by default</Text>
+                    <Text style={styles.featureBody}>
+                      Your profile is stored on this device. You control what you share.
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ) : null}
+
+            {step === 1 ? (
+              <View style={styles.fields}>
+                <SoftField
+                  label="Full name"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="As you’d like it on your card"
+                  autoComplete="name"
+                  autoCapitalize="words"
+                />
+                <SoftField
+                  label="Work email"
+                  hint="Used to match connection requests"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="name@organisation.org"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                />
+                <SoftField
+                  label="Mobile number"
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="+256 …"
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                />
+              </View>
+            ) : null}
+
+            {step === 2 ? (
+              <View style={styles.fields}>
+                <SoftField
+                  label="Organisation"
+                  value={organization}
+                  onChangeText={setOrganization}
+                  placeholder="Company, ministry, or institution"
+                />
+                <SoftField
+                  label="Designation"
+                  value={designation}
+                  onChangeText={setDesignation}
+                  placeholder="e.g. Programme Officer"
+                />
+                <SoftField
+                  label="City / address"
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Kampala, Uganda"
+                  multiline
+                  style={styles.multiline}
+                />
+              </View>
+            ) : null}
+          </ScrollView>
+
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+            {step < 2 ? (
+              <Pressable style={styles.cta} onPress={goNext}>
+                <Text style={styles.ctaText}>{step === 0 ? 'Get started' : 'Continue'}</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.white} />
+              </Pressable>
             ) : (
-              <Text style={styles.primaryBtnText}>Continue to my profile</Text>
+              <Pressable style={[styles.cta, busy && styles.ctaDisabled]} disabled={busy} onPress={submit}>
+                {busy ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <>
+                    <Text style={styles.ctaText}>Create my profile</Text>
+                    <Ionicons name="checkmark" size={18} color={colors.white} />
+                  </>
+                )}
+              </Pressable>
             )}
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    paddingHorizontal: 24,
-    paddingBottom: 28,
-    paddingTop: 12,
+  root: {
+    flex: 1,
+    backgroundColor: colors.primaryDark,
   },
-  kicker: {
-    fontSize: 12,
+  top: {
+    paddingHorizontal: 28,
+    paddingBottom: 32,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 22,
+  },
+  progressSeg: {
+    flex: 1,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  progressSegActive: {
+    backgroundColor: colors.accent,
+  },
+  brandMark: {
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.2,
+    letterSpacing: 1.6,
     color: colors.accent,
+    marginBottom: 14,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  heroTitle: {
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: -0.4,
     marginBottom: 10,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.white,
-    marginBottom: 8,
-  },
-  subtitle: {
+  heroSubtitle: {
     fontSize: 15,
-    lineHeight: 22,
-    color: 'rgba(255,255,255,0.88)',
+    lineHeight: 23,
+    color: 'rgba(255,255,255,0.78)',
+    maxWidth: 340,
   },
-  body: {
+  sheet: {
     flex: 1,
-    backgroundColor: colors.background,
-    marginTop: -12,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    marginTop: -8,
     overflow: 'hidden',
   },
-  form: {
-    padding: 24,
+  sheetContent: {
+    paddingHorizontal: 28,
+    paddingTop: 28,
   },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+  welcomeBlock: {
+    gap: 20,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  featureIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: `${colors.primary}12`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureCopy: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 4,
   },
-  formHint: {
-    fontSize: 13,
+  featureBody: {
+    fontSize: 14,
+    lineHeight: 21,
     color: colors.textMuted,
-    marginBottom: 16,
   },
-  error: {
-    backgroundColor: '#FEF2F2',
-    color: colors.error,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+  fields: {
+    gap: 22,
+  },
+  field: {
+    gap: 6,
+  },
+  fieldLabel: {
     fontSize: 13,
     fontWeight: '600',
+    color: colors.text,
+    letterSpacing: 0.2,
   },
-  primaryBtn: {
+  fieldHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  fieldInput: {
+    fontSize: 17,
+    lineHeight: 24,
+    color: colors.text,
+    paddingVertical: 12,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#E2E8F0',
+  },
+  fieldInputFocused: {
+    borderBottomColor: colors.primary,
+  },
+  multiline: {
+    minHeight: 64,
+    textAlignVertical: 'top',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 18,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.error,
+  },
+  footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 28,
+    paddingTop: 12,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  cta: {
     backgroundColor: colors.primary,
-    borderRadius: 14,
-    minHeight: 52,
+    minHeight: 54,
+    borderRadius: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    gap: 8,
   },
-  primaryBtnText: {
-    color: colors.white,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  btnDisabled: {
+  ctaDisabled: {
     opacity: 0.7,
+  },
+  ctaText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });
