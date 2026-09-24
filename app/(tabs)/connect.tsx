@@ -266,7 +266,6 @@ export default function ConnectScreen() {
         />
         <View style={styles.heroTop}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.kicker}>Networking</Text>
             <Text style={styles.title}>Connect</Text>
             <Text style={styles.subtitle}>Find attendees and send connection requests</Text>
           </View>
