@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppStatusBar } from '@/components/layout/AppStatusBar';
 
-import { HomeCtaSection } from '@/components/home/HomeCtaSection';
 import { HomeStatsBar } from '@/components/home/HomeStatsBar';
 import { ViewVenueBadge } from '@/components/home/ViewVenueBadge';
 import { MediaShowcase } from '@/components/home/MediaShowcase';
@@ -123,22 +122,13 @@ export default function HomeScreen() {
             <Text style={styles.programButtonText}>View Program</Text>
           </Pressable>
 
-          {conference.registrationOpen ? (
-            <Pressable
-              style={({ pressed }) => [styles.registerButton, pressed && styles.registerButtonPressed]}
-              onPress={() => router.navigate(routes.register)}
-            >
-              <Text style={styles.registerButtonText}>Register Now</Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.text} />
-            </Pressable>
-          ) : (
-            <View style={styles.closedPill}>
-              <Ionicons name="time-outline" size={14} color="rgba(255,255,255,0.85)" />
-              <Text style={styles.closedPillText} numberOfLines={1}>
-                {conference.regClosedMessage || 'Opening soon'}
-              </Text>
-            </View>
-          )}
+          <Pressable
+            style={({ pressed }) => [styles.exploreButton, pressed && styles.exploreButtonPressed]}
+            onPress={() => router.navigate(routes.exploreUganda)}
+          >
+            <Ionicons name="compass-outline" size={16} color={colors.text} />
+            <Text style={styles.exploreButtonText}>Explore Uganda</Text>
+          </Pressable>
         </View>
       </View>
     </LinearGradient>
@@ -180,7 +170,6 @@ export default function HomeScreen() {
       <ViewVenueBadge conference={conference} />
       <ExploreUgandaCta placement="home" />
       <RecActionsBadge />
-      <HomeCtaSection conference={conference} />
 
       <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -254,7 +243,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
-  registerButton: {
+  exploreButton: {
     height: 48,
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,30 +258,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  registerButtonPressed: {
+  exploreButtonPressed: {
     backgroundColor: colors.accentDark,
   },
-  registerButtonText: {
+  exploreButtonText: {
     color: colors.text,
     fontWeight: '800',
     fontSize: 15,
-  },
-  closedPill: {
-    height: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  closedPillText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    fontSize: 13,
   },
   warningBanner: {
     backgroundColor: '#FEE2E2',
