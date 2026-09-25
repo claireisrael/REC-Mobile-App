@@ -345,7 +345,7 @@ export default function ConnectScreen() {
               <Text style={styles.emptyBody}>
                 {search
                   ? 'Try a different name.'
-                  : 'The Connect directory is empty. Pull to refresh after sync.'}
+                  : 'No registered participants for this conference yet. Pull to refresh.'}
               </Text>
             </View>
           }

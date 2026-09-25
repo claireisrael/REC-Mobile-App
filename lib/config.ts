@@ -9,6 +9,7 @@ const productionDefaults = {
     projectId: '66bcc8450005201fa1af',
     databaseId: '66bcc8760033a24883f6',
     conferencesCollectionId: '6863ae070028061694f1',
+    registrantsCollectionId: '6863affd00058c01e424',
     sessionsCollectionId: '68e60fc1003b0bbb05d8',
     programsCollectionId: '68e62391001de7d5c9be',
     programTimeBlocksCollectionId: 'rec_program_time_blocks',
@@ -53,6 +54,10 @@ export const config = {
     conferencesCollectionId: pick(
       process.env.EXPO_PUBLIC_APPWRITE_CONFERENCES_COLLECTION_ID,
       productionDefaults.appwrite.conferencesCollectionId
+    ),
+    registrantsCollectionId: pick(
+      process.env.EXPO_PUBLIC_APPWRITE_REGISTRANTS_COLLECTION_ID,
+      productionDefaults.appwrite.registrantsCollectionId
     ),
     sessionsCollectionId: pick(
       process.env.EXPO_PUBLIC_APPWRITE_SESSIONS_COLLECTION_ID,

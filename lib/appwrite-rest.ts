@@ -2,6 +2,7 @@ import { config } from './config';
 
 type AppwriteQuery =
   | { method: 'equal'; attribute: string; values: (string | number | boolean)[] }
+  | { method: 'contains'; attribute: string; values: (string | number | boolean)[] }
   | { method: 'orderAsc'; attribute: string }
   | { method: 'orderDesc'; attribute: string }
   | { method: 'limit'; values: number[] }
@@ -11,6 +12,9 @@ type AppwriteQuery =
 export const AppwriteQuery = {
   equal(attribute: string, value: string | number | boolean) {
     return { method: 'equal' as const, attribute, values: [value] };
+  },
+  contains(attribute: string, value: string | number | boolean) {
+    return { method: 'contains' as const, attribute, values: [value] };
   },
   orderAsc(attribute: string) {
     return { method: 'orderAsc' as const, attribute };

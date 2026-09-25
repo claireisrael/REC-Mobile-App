@@ -42,6 +42,9 @@ export type ConnectNotification = {
 function peopleId() {
   return config.appwrite.connectPeopleCollectionId;
 }
+function registrantsId() {
+  return config.appwrite.registrantsCollectionId;
+}
 function requestsId() {
   return config.appwrite.connectRequestsCollectionId;
 }
@@ -56,6 +59,78 @@ function normalizeEmail(email: string) {
   return String(email || '')
     .trim()
     .toLowerCase();
+}
+
+type RegistrantDoc = {
+  $id: string;
+  email?: string;
+  firstName?: string;
+  otherName?: string;
+  lastName?: string;
+  organization?: string | null;
+  designation?: string | null;
+  registrationType?: string | null;
+  conferenceYears?: number[] | null;
+};
+
+function registrantToPerson(reg: RegistrantDoc): ConnectPerson | null {
+  const email = normalizeEmail(reg.email || '');
+  if (!email || !email.includes('@')) return null;
+  const fullName =
+    [reg.firstName, reg.otherName, reg.lastName].filter(Boolean).join(' ').trim() || 'Attendee';
+  const years = Array.isArray(reg.conferenceYears)
+    ? reg.conferenceYears.map(Number).filter((y) => Number.isFinite(y))
+    : [];
+  return {
+    $id: `reg_${reg.$id}`,
+    fullName,
+    email,
+    organization: String(reg.organization || '').trim() || null,
+    designation: String(reg.designation || '').trim() || null,
+    registrationType: String(reg.registrationType || 'Attendee').trim() || 'Attendee',
+    registrantId: reg.$id,
+    conferenceYears: years,
+  };
+}
+
+async function resolveActiveConferenceYear(): Promise<number | null> {
+  try {
+    const { apiService } = await import('@/lib/api-service');
+    const conference = await apiService.getActiveConference();
+    const year = Number(conference?.year);
+    if (Number.isFinite(year) && year > 2000) return year;
+    const start = conference?.startDate ? new Date(conference.startDate) : null;
+    if (start && !Number.isNaN(start.getTime())) return start.getFullYear();
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Live directory from REC_Registrations for the active conference year.
+ * Same filter as the admin dashboard (conferenceYears contains year).
+ */
+async function listRegistrantsForActiveYear(): Promise<ConnectPerson[]> {
+  const activeYear = await resolveActiveConferenceYear();
+  if (activeYear == null) {
+    throw new Error('No active conference year for Connect directory');
+  }
+
+  const docs = await listAllDocuments<RegistrantDoc>(registrantsId(), [
+    AppwriteQuery.contains('conferenceYears', activeYear),
+  ]);
+
+  const byEmail = new Map<string, ConnectPerson>();
+  for (const doc of docs) {
+    const person = registrantToPerson(doc);
+    if (!person) continue;
+    if (!byEmail.has(person.email)) byEmail.set(person.email, person);
+  }
+
+  return Array.from(byEmail.values()).sort((a, b) =>
+    a.fullName.localeCompare(b.fullName, undefined, { sensitivity: 'base' })
+  );
 }
 
 async function sendExpoPush(toToken: string, title: string, body: string, data?: Record<string, string>) {
@@ -94,56 +169,28 @@ function isRegisteredAttendee(person: ConnectPerson) {
   return Boolean(id) && id !== '__profile__';
 }
 
-function personYears(person: ConnectPerson): number[] {
-  return Array.isArray(person.conferenceYears)
-    ? person.conferenceYears.map(Number).filter((y) => Number.isFinite(y))
-    : [];
-}
-
-async function resolveActiveConferenceYear(): Promise<number | null> {
-  try {
-    const { apiService } = await import('@/lib/api-service');
-    const conference = await apiService.getActiveConference();
-    const year = Number(conference?.year);
-    return Number.isFinite(year) && year > 2000 ? year : null;
-  } catch {
-    return null;
-  }
-}
-
 export const connectApi = {
   /**
-   * Active-conference registrants only (same count as admin dashboard).
-   * Prefers live REC_Registrations via /api/connect/people; falls back to
-   * rec_connect_people if the API is unreachable.
+   * Always loads live from REC_Registrations for the active conference year
+   * (same source/count as the admin dashboard). No manual sync required.
    */
   async listPeople(search = ''): Promise<ConnectPerson[]> {
-    let registered: ConnectPerson[] | null = null;
+    let registered: ConnectPerson[];
 
     try {
-      const response = await fetch(`${config.apiBaseUrl}/api/connect/people`, {
-        cache: 'no-store',
-      });
-      if (response.ok) {
-        const data = (await response.json()) as {
-          people?: ConnectPerson[];
-        };
-        // Live REC_Registrations for the active year (e.g. all REC26).
-        registered = (data.people || []).filter(isRegisteredAttendee);
-      }
+      registered = await listRegistrantsForActiveYear();
     } catch {
-      // Fall through to Appwrite collection.
-    }
-
-    if (registered == null) {
-      const [people, activeYear] = await Promise.all([
-        listAllDocuments<ConnectPerson>(peopleId(), [AppwriteQuery.orderAsc('fullName')]),
-        resolveActiveConferenceYear(),
+      // Temporary fallback only if registrants query fails (permissions/network).
+      const people = await listAllDocuments<ConnectPerson>(peopleId(), [
+        AppwriteQuery.orderAsc('fullName'),
       ]);
+      const activeYear = await resolveActiveConferenceYear();
       registered = people.filter((person) => {
         if (!isRegisteredAttendee(person)) return false;
         if (activeYear == null) return true;
-        const years = personYears(person);
+        const years = Array.isArray(person.conferenceYears)
+          ? person.conferenceYears.map(Number)
+          : [];
         if (!years.length) return true;
         return years.includes(activeYear);
       });
@@ -158,8 +205,8 @@ export const connectApi = {
   },
 
   /**
-   * Update an existing directory row only. Never create rows — Connect
-   * people are created from REC_Registrations (registration save + sync).
+   * Update an existing Connect mirror row only (profile display fields).
+   * Directory membership always comes from REC_Registrations.
    */
   async upsertPerson(fields: {
     email: string;
